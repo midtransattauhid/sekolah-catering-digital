@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -164,6 +163,68 @@ const Orders = () => {
     return orders.filter(order => order.status === status);
   };
 
+  const retryPayment = async (order: Order) => {
+    try {
+      const customerDetails = {
+        first_name: order.child_name,
+        email: 'parent@example.com', // You might want to get this from user profile
+        phone: '08123456789',
+      };
+
+      const itemDetails = order.order_items.map(item => ({
+        id: item.id,
+        price: item.price,
+        quantity: item.quantity,
+        name: item.food_items.name,
+      }));
+
+      const { data: paymentData, error: paymentError } = await supabase.functions.invoke(
+        'create-payment',
+        {
+          body: {
+            orderId: order.midtrans_order_id,
+            amount: order.total_amount,
+            customerDetails,
+            itemDetails,
+          },
+        }
+      );
+
+      if (paymentError) throw paymentError;
+
+      if (window.snap && paymentData.snap_token) {
+        window.snap.pay(paymentData.snap_token, {
+          onSuccess: () => {
+            toast({
+              title: "Pembayaran Berhasil!",
+              description: "Pembayaran berhasil diproses.",
+            });
+            fetchOrders(); // Refresh orders
+          },
+          onPending: () => {
+            toast({
+              title: "Menunggu Pembayaran",
+              description: "Pembayaran sedang diproses.",
+            });
+          },
+          onError: () => {
+            toast({
+              title: "Pembayaran Gagal",
+              description: "Terjadi kesalahan dalam pembayaran.",
+              variant: "destructive",
+            });
+          }
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal memproses pembayaran",
+        variant: "destructive",
+      });
+    }
+  };
+
   const OrderCard = ({ order }: { order: Order }) => (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
@@ -229,12 +290,7 @@ const Orders = () => {
           {order.payment_status === 'pending' && (
             <Button 
               className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-              onClick={() => {
-                toast({
-                  title: "Info",
-                  description: "Integrasi Midtrans akan segera tersedia",
-                });
-              }}
+              onClick={() => retryPayment(order)}
             >
               Bayar Sekarang
             </Button>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,19 @@ import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
+
+declare global {
+  interface Window {
+    snap: {
+      pay: (token: string, options?: {
+        onSuccess?: (result: any) => void;
+        onPending?: (result: any) => void;
+        onError?: (result: any) => void;
+        onClose?: () => void;
+      }) => void;
+    };
+  }
+}
 
 interface CartItem {
   id: string;
@@ -43,6 +55,18 @@ const Cart = ({ items, onUpdateCart }: CartProps) => {
       fetchChildren();
     }
   }, [user, isOpen]);
+
+  useEffect(() => {
+    // Load Midtrans Snap script
+    const script = document.createElement('script');
+    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.setAttribute('data-client-key', 'SB-Mid-client-your-client-key-here');
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const fetchChildren = async () => {
     try {
@@ -115,7 +139,7 @@ const Cart = ({ items, onUpdateCart }: CartProps) => {
       const totalAmount = getTotalPrice();
       const orderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // Create order
+      // Create order first
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -148,20 +172,83 @@ const Cart = ({ items, onUpdateCart }: CartProps) => {
 
       if (itemsError) throw itemsError;
 
-      toast({
-        title: "Berhasil!",
-        description: "Pesanan berhasil dibuat. Silakan lakukan pembayaran.",
-      });
+      // Prepare payment data
+      const customerDetails = {
+        first_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer',
+        email: user?.email,
+        phone: user?.user_metadata?.phone || '08123456789',
+      };
 
-      // Clear cart and close dialog
-      onUpdateCart([]);
-      setIsOpen(false);
-      setSelectedChildId('');
-      setNotes('');
+      const itemDetails = items.map(item => ({
+        id: item.id,
+        price: item.price,
+        quantity: item.quantity,
+        name: item.name,
+      }));
 
-      // TODO: Integrate with Midtrans payment gateway
-      // For now, we'll just show success message
-      
+      // Create payment transaction
+      const { data: paymentData, error: paymentError } = await supabase.functions.invoke(
+        'create-payment',
+        {
+          body: {
+            orderId,
+            amount: totalAmount,
+            customerDetails,
+            itemDetails,
+          },
+        }
+      );
+
+      if (paymentError) throw paymentError;
+
+      // Open Midtrans Snap
+      if (window.snap && paymentData.snap_token) {
+        window.snap.pay(paymentData.snap_token, {
+          onSuccess: (result) => {
+            console.log('Payment success:', result);
+            toast({
+              title: "Pembayaran Berhasil!",
+              description: "Pesanan Anda telah dikonfirmasi dan sedang diproses.",
+            });
+            
+            // Clear cart and close dialog
+            onUpdateCart([]);
+            setIsOpen(false);
+            setSelectedChildId('');
+            setNotes('');
+          },
+          onPending: (result) => {
+            console.log('Payment pending:', result);
+            toast({
+              title: "Menunggu Pembayaran",
+              description: "Pembayaran Anda sedang diproses. Mohon tunggu konfirmasi.",
+            });
+            
+            // Clear cart and close dialog
+            onUpdateCart([]);
+            setIsOpen(false);
+            setSelectedChildId('');
+            setNotes('');
+          },
+          onError: (result) => {
+            console.error('Payment error:', result);
+            toast({
+              title: "Pembayaran Gagal",
+              description: "Terjadi kesalahan dalam proses pembayaran. Silakan coba lagi.",
+              variant: "destructive",
+            });
+          },
+          onClose: () => {
+            console.log('Payment popup closed');
+            toast({
+              title: "Pembayaran Dibatalkan",
+              description: "Anda membatalkan proses pembayaran.",
+            });
+          }
+        });
+      } else {
+        throw new Error('Midtrans Snap not loaded or token not received');
+      }
     } catch (error: any) {
       console.error('Error creating order:', error);
       toast({

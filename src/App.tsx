@@ -11,6 +11,7 @@ import Children from "./pages/Children";
 import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
+import MidtransScript from "./components/MidtransScript";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +101,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <MidtransScript />
       <BrowserRouter>
         <AuthProvider>
           <AppContent />
