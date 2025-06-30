@@ -42,6 +42,50 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_menus: {
+        Row: {
+          created_at: string | null
+          current_quantity: number | null
+          date: string
+          food_item_id: string | null
+          id: string
+          is_available: boolean | null
+          max_quantity: number | null
+          price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_quantity?: number | null
+          date: string
+          food_item_id?: string | null
+          id?: string
+          is_available?: boolean | null
+          max_quantity?: number | null
+          price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_quantity?: number | null
+          date?: string
+          food_item_id?: string | null
+          id?: string
+          is_available?: boolean | null
+          max_quantity?: number | null
+          price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_menus_food_item_id_fkey"
+            columns: ["food_item_id"]
+            isOneToOne: false
+            referencedRelation: "food_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       food_items: {
         Row: {
           category: Database["public"]["Enums"]["food_category"]
@@ -120,6 +164,45 @@ export type Database = {
           },
         ]
       }
+      order_schedules: {
+        Row: {
+          created_at: string | null
+          current_orders: number | null
+          cutoff_date: string | null
+          cutoff_time: string | null
+          date: string
+          id: string
+          is_blocked: boolean | null
+          max_orders: number | null
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_orders?: number | null
+          cutoff_date?: string | null
+          cutoff_time?: string | null
+          date: string
+          id?: string
+          is_blocked?: boolean | null
+          max_orders?: number | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_orders?: number | null
+          cutoff_date?: string | null
+          cutoff_time?: string | null
+          date?: string
+          id?: string
+          is_blocked?: boolean | null
+          max_orders?: number | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           child_class: string | null
@@ -131,6 +214,7 @@ export type Database = {
           midtrans_order_id: string | null
           midtrans_transaction_id: string | null
           notes: string | null
+          order_date: string | null
           payment_status: Database["public"]["Enums"]["payment_status"] | null
           status: Database["public"]["Enums"]["order_status"] | null
           total_amount: number
@@ -147,6 +231,7 @@ export type Database = {
           midtrans_order_id?: string | null
           midtrans_transaction_id?: string | null
           notes?: string | null
+          order_date?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
           status?: Database["public"]["Enums"]["order_status"] | null
           total_amount: number
@@ -163,6 +248,7 @@ export type Database = {
           midtrans_order_id?: string | null
           midtrans_transaction_id?: string | null
           notes?: string | null
+          order_date?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
           status?: Database["public"]["Enums"]["order_status"] | null
           total_amount?: number
