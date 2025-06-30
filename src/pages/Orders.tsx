@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +18,7 @@ interface Order {
   payment_status: string;
   notes: string | null;
   created_at: string;
+  midtrans_order_id: string | null;
   order_items: {
     id: string;
     quantity: number;
