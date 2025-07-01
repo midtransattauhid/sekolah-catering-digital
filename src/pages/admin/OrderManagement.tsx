@@ -11,6 +11,9 @@ import { Order } from '@/types/order';
 import { getStatusColor, getStatusText, getPaymentStatusColor, getPaymentStatusText, formatPrice, formatDate } from '@/utils/orderUtils';
 import { Search, Filter } from 'lucide-react';
 
+type OrderStatus = "pending" | "confirmed" | "preparing" | "ready" | "delivered" | "cancelled";
+type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+
 const OrderManagement = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
@@ -84,7 +87,7 @@ const OrderManagement = () => {
     setFilteredOrders(filtered);
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
       const { error } = await supabase
         .from('orders')
@@ -248,7 +251,7 @@ const OrderManagement = () => {
                     <label className="text-sm font-medium">Update Status:</label>
                     <Select
                       value={order.status}
-                      onValueChange={(value) => updateOrderStatus(order.id, value)}
+                      onValueChange={(value: OrderStatus) => updateOrderStatus(order.id, value)}
                     >
                       <SelectTrigger>
                         <SelectValue />
