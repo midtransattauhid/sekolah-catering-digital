@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, User, ShoppingBag, CalendarIcon, LogOut } from "lucide-react";
+import { Home, User, ShoppingBag, CalendarIcon, LogOut, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,19 +14,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 
-interface NavbarProps {
-  
-}
-
-const Navbar: React.FC<NavbarProps> = () => {
+const Navbar = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const { isAdmin } = useUserRole();
 
   return (
     <div className="bg-orange-500 text-white py-4 shadow-md">
@@ -88,10 +82,19 @@ const Navbar: React.FC<NavbarProps> = () => {
               <User className="mr-2 h-4 w-4" />
               <span>Profil</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/orders')}>
               <ShoppingBag className="mr-2 h-4 w-4" />
               <span>Pesanan</span>
             </DropdownMenuItem>
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/admin')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Panel Admin</span>
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut()}>
               <LogOut className="mr-2 h-4 w-4" />
