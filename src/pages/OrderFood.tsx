@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +51,7 @@ interface CartItem {
   quantity: number;
   date: string;
   child_id: string;
+  food_item_id: string; // Add this field
 }
 
 const OrderFood = () => {
@@ -227,7 +229,8 @@ const OrderFood = () => {
         price: menu.price,
         quantity: 1,
         date: dateStr,
-        child_id: selectedChild
+        child_id: selectedChild,
+        food_item_id: menu.food_item_id // Store the full UUID
       };
       setCart([...cart, newItem]);
     }
@@ -316,10 +319,10 @@ const OrderFood = () => {
 
         if (orderError) throw orderError;
 
-        // Create order items
+        // Create order items using the stored food_item_id
         const orderItems = orderGroup.items.map((item: CartItem) => ({
           order_id: order.id,
-          food_item_id: item.id.split('-')[0], // Extract food_item_id from cart id
+          food_item_id: item.food_item_id, // Use the full UUID stored in cart
           quantity: item.quantity,
           price: item.price
         }));
