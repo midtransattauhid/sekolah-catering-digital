@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Clock, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, User, Clock, AlertTriangle, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
@@ -44,12 +43,22 @@ interface DailyMenu {
   };
 }
 
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  date: string;
+  child_id: string;
+}
+
 const OrderFood = () => {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [children, setChildren] = useState<Child[]>([]);
   const [orderSchedules, setOrderSchedules] = useState<OrderSchedule[]>([]);
   const [dailyMenus, setDailyMenus] = useState<DailyMenu[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -188,6 +197,157 @@ const OrderFood = () => {
     }).format(price);
   };
 
+  const addToCart = (menu: DailyMenu) => {
+    if (!selectedChild || !selectedDate) {
+      toast({
+        title: "Pilih anak dan tanggal",
+        description: "Mohon pilih anak dan tanggal terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const cartItemId = `${menu.food_item_id}-${dateStr}-${selectedChild}`;
+    
+    const existingItem = cart.find(item => 
+      item.id === cartItemId
+    );
+
+    if (existingItem) {
+      setCart(cart.map(item =>
+        item.id === cartItemId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      const newItem: CartItem = {
+        id: cartItemId,
+        name: menu.food_items.name,
+        price: menu.price,
+        quantity: 1,
+        date: dateStr,
+        child_id: selectedChild
+      };
+      setCart([...cart, newItem]);
+    }
+
+    toast({
+      title: "Berhasil ditambahkan",
+      description: `${menu.food_items.name} ditambahkan ke keranjang`,
+    });
+  };
+
+  const updateQuantity = (cartItemId: string, newQuantity: number) => {
+    if (newQuantity === 0) {
+      setCart(cart.filter(item => item.id !== cartItemId));
+    } else {
+      setCart(cart.map(item =>
+        item.id === cartItemId
+          ? { ...item, quantity: newQuantity }
+          : item
+      ));
+    }
+  };
+
+  const getCartQuantity = (menu: DailyMenu) => {
+    if (!selectedChild || !selectedDate) return 0;
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const cartItemId = `${menu.food_item_id}-${dateStr}-${selectedChild}`;
+    const item = cart.find(item => item.id === cartItemId);
+    return item ? item.quantity : 0;
+  };
+
+  const getTotalCartItems = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const getTotalCartPrice = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const createOrder = async () => {
+    if (cart.length === 0) {
+      toast({
+        title: "Keranjang kosong",
+        description: "Tambahkan menu terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Group cart items by date and child
+      const ordersByDate = cart.reduce((acc, item) => {
+        const key = `${item.date}-${item.child_id}`;
+        if (!acc[key]) {
+          acc[key] = {
+            date: item.date,
+            child_id: item.child_id,
+            items: []
+          };
+        }
+        acc[key].items.push(item);
+        return acc;
+      }, {} as any);
+
+      for (const orderGroup of Object.values(ordersByDate) as any[]) {
+        const selectedChildData = children.find(c => c.id === orderGroup.child_id);
+        const totalAmount = orderGroup.items.reduce((sum: number, item: CartItem) => 
+          sum + (item.price * item.quantity), 0
+        );
+
+        // Create order
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            user_id: user?.id,
+            child_id: orderGroup.child_id,
+            child_name: selectedChildData?.name,
+            child_class: selectedChildData?.class_name,
+            total_amount: totalAmount,
+            order_date: orderGroup.date,
+            status: 'pending',
+            payment_status: 'pending'
+          })
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+
+        // Create order items
+        const orderItems = orderGroup.items.map((item: CartItem) => ({
+          order_id: order.id,
+          food_item_id: item.id.split('-')[0], // Extract food_item_id from cart id
+          quantity: item.quantity,
+          price: item.price
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) throw itemsError;
+      }
+
+      toast({
+        title: "Pesanan berhasil dibuat",
+        description: "Pesanan Anda telah berhasil dibuat",
+      });
+
+      // Clear cart
+      setCart([]);
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal membuat pesanan",
+        variant: "destructive",
+      });
+    }
+  };
+
   const selectedChild_data = children.find(c => c.id === selectedChild);
 
   if (loading) {
@@ -319,29 +479,58 @@ const OrderFood = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {dailyMenus.map((menu) => (
-                      <div key={menu.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50">
-                        <img
-                          src={menu.food_items.image_url}
-                          alt={menu.food_items.name}
-                          className="w-16 h-16 object-cover rounded"
-                        />
-                        <div className="flex-1">
-                          <h3 className="font-medium">{menu.food_items.name}</h3>
-                          <p className="text-sm text-gray-600">{menu.food_items.description}</p>
-                          <p className="font-semibold text-orange-600">{formatPrice(menu.price)}</p>
-                          <Badge variant="outline" className="text-xs">
-                            {menu.food_items.category}
-                          </Badge>
+                    {dailyMenus.map((menu) => {
+                      const quantity = getCartQuantity(menu);
+                      return (
+                        <div key={menu.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50">
+                          <img
+                            src={menu.food_items.image_url}
+                            alt={menu.food_items.name}
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                          <div className="flex-1">
+                            <h3 className="font-medium">{menu.food_items.name}</h3>
+                            <p className="text-sm text-gray-600">{menu.food_items.description}</p>
+                            <p className="font-semibold text-orange-600">{formatPrice(menu.price)}</p>
+                            <Badge variant="outline" className="text-xs">
+                              {menu.food_items.category}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {quantity > 0 ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateQuantity(`${menu.food_item_id}-${format(selectedDate, 'yyyy-MM-dd')}-${selectedChild}`, quantity - 1)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <span className="mx-2 font-semibold w-8 text-center">{quantity}</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateQuantity(`${menu.food_item_id}-${format(selectedDate, 'yyyy-MM-dd')}-${selectedChild}`, quantity + 1)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button 
+                                size="sm"
+                                onClick={() => addToCart(menu)}
+                                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Tambah
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <Button 
-                          size="sm"
-                          className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                        >
-                          Tambah
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -356,6 +545,20 @@ const OrderFood = () => {
           )}
         </div>
       </div>
+
+      {/* Floating Cart Button */}
+      {cart.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <Button
+            onClick={createOrder}
+            size="lg"
+            className="rounded-full shadow-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+          >
+            <ShoppingCart className="h-5 w-5 mr-2" />
+            {getTotalCartItems()} item • {formatPrice(getTotalCartPrice())}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

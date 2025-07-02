@@ -321,6 +321,18 @@ export type Database = {
       }
     }
     Views: {
+      admin_users: {
+        Row: {
+          user_id: string | null
+        }
+        Insert: {
+          user_id?: string | null
+        }
+        Update: {
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sales_summary: {
         Row: {
           avg_order_value: number | null
