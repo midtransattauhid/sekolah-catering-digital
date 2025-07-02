@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHash } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -22,15 +21,19 @@ serve(async (req) => {
       throw new Error('Midtrans server key not configured');
     }
 
-    // Verify signature
+    // Verify signature using Web Crypto API
     const signatureKey = notification.signature_key;
     const orderId = notification.order_id;
     const statusCode = notification.status_code;
     const grossAmount = notification.gross_amount;
     
-    const mySignatureKey = createHash("sha512")
-      .update(orderId + statusCode + grossAmount + serverKey)
-      .toString();
+    // Create signature string and hash it using Web Crypto API
+    const signatureString = orderId + statusCode + grossAmount + serverKey;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(signatureString);
+    const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const mySignatureKey = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     if (signatureKey !== mySignatureKey) {
       console.error('Invalid signature');
