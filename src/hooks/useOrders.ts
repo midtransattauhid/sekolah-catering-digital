@@ -51,10 +51,21 @@ export const useOrders = () => {
 
   const retryPayment = async (order: Order) => {
     try {
+      // Generate new order ID if not exists
+      const orderId = order.midtrans_order_id || `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Update order with new midtrans_order_id if it was null
+      if (!order.midtrans_order_id) {
+        await supabase
+          .from('orders')
+          .update({ midtrans_order_id: orderId })
+          .eq('id', order.id);
+      }
+
       const customerDetails = {
-        first_name: order.child_name,
-        email: 'parent@example.com',
-        phone: '08123456789',
+        first_name: order.child_name || 'Customer',
+        email: user?.email || 'parent@example.com',
+        phone: user?.user_metadata?.phone || '08123456789',
       };
 
       const itemDetails = order.order_items.map(item => ({
@@ -64,11 +75,18 @@ export const useOrders = () => {
         name: item.food_items.name,
       }));
 
+      console.log('Calling create-payment with:', {
+        orderId,
+        amount: order.total_amount,
+        customerDetails,
+        itemDetails
+      });
+
       const { data: paymentData, error: paymentError } = await supabase.functions.invoke(
         'create-payment',
         {
           body: {
-            orderId: order.midtrans_order_id,
+            orderId,
             amount: order.total_amount,
             customerDetails,
             itemDetails,
@@ -76,7 +94,10 @@ export const useOrders = () => {
         }
       );
 
-      if (paymentError) throw paymentError;
+      if (paymentError) {
+        console.error('Payment error:', paymentError);
+        throw paymentError;
+      }
 
       if (window.snap && paymentData.snap_token) {
         window.snap.pay(paymentData.snap_token, {
@@ -92,6 +113,7 @@ export const useOrders = () => {
               title: "Menunggu Pembayaran",
               description: "Pembayaran sedang diproses.",
             });
+            fetchOrders();
           },
           onError: () => {
             toast({
@@ -101,8 +123,11 @@ export const useOrders = () => {
             });
           }
         });
+      } else {
+        throw new Error('Snap token tidak diterima atau Midtrans Snap belum loaded');
       }
     } catch (error: any) {
+      console.error('Retry payment error:', error);
       toast({
         title: "Error",
         description: error.message || "Gagal memproses pembayaran",

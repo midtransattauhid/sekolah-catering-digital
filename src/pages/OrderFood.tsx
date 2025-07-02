@@ -301,6 +301,9 @@ const OrderFood = () => {
           sum + (item.price * item.quantity), 0
         );
 
+        // Generate unique order ID
+        const midtransOrderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
         // Create order
         const { data: order, error: orderError } = await supabase
           .from('orders')
@@ -311,6 +314,7 @@ const OrderFood = () => {
             child_class: selectedChildData?.class_name,
             total_amount: totalAmount,
             order_date: orderGroup.date,
+            midtrans_order_id: midtransOrderId,
             status: 'pending',
             payment_status: 'pending'
           })
@@ -332,6 +336,8 @@ const OrderFood = () => {
           .insert(orderItems);
 
         if (itemsError) throw itemsError;
+
+        console.log('Order created successfully:', order);
       }
 
       toast({

@@ -17,6 +17,15 @@ serve(async (req) => {
 
     console.log('Creating payment for order:', orderId);
 
+    // Validate required fields
+    if (!orderId) {
+      throw new Error('Order ID is required');
+    }
+
+    if (!amount || amount <= 0) {
+      throw new Error('Valid amount is required');
+    }
+
     const serverKey = Deno.env.get('MIDTRANS_SERVER_KEY');
     if (!serverKey) {
       throw new Error('Midtrans server key not configured');
@@ -34,8 +43,12 @@ serve(async (req) => {
           order_id: orderId,
           gross_amount: amount,
         },
-        customer_details: customerDetails,
-        item_details: itemDetails,
+        customer_details: customerDetails || {
+          first_name: 'Customer',
+          email: 'customer@example.com',
+          phone: '08123456789',
+        },
+        item_details: itemDetails || [],
         credit_card: {
           secure: true,
         },
