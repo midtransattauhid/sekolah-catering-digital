@@ -5,47 +5,70 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Minus, ShoppingCart } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, Minus, ShoppingCart, CalendarIcon } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { format } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
-interface FoodItem {
+interface DailyMenu {
   id: string;
-  name: string;
-  description: string;
+  date: string;
+  food_item_id: string;
   price: number;
-  category: 'makanan' | 'minuman';
-  image_url: string;
   is_available: boolean;
+  max_quantity: number | null;
+  current_quantity: number;
+  food_items: {
+    name: string;
+    description: string;
+    image_url: string;
+    category: 'makanan' | 'minuman';
+  };
 }
 
-interface CartItem extends FoodItem {
+interface CartItem extends DailyMenu {
   quantity: number;
 }
 
 const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
-  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [dailyMenus, setDailyMenus] = useState<DailyMenu[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
-    fetchFoodItems();
-  }, []);
+    fetchDailyMenus();
+  }, [selectedDate]);
 
-  const fetchFoodItems = async () => {
+  const fetchDailyMenus = async () => {
     try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      
       const { data, error } = await supabase
-        .from('food_items')
-        .select('*')
+        .from('daily_menus')
+        .select(`
+          *,
+          food_items (
+            name,
+            description,
+            image_url,
+            category
+          )
+        `)
+        .eq('date', dateStr)
         .eq('is_available', true)
-        .order('category', { ascending: true });
+        .order('food_items(category)', { ascending: true });
 
       if (error) throw error;
-      setFoodItems(data || []);
+      setDailyMenus(data || []);
     } catch (error) {
-      console.error('Error fetching food items:', error);
+      console.error('Error fetching daily menus:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat menu",
+        description: "Gagal memuat menu harian",
         variant: "destructive",
       });
     } finally {
@@ -53,7 +76,7 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
     }
   };
 
-  const addToCart = (item: FoodItem) => {
+  const addToCart = (item: DailyMenu) => {
     const existingItem = cart.find(cartItem => cartItem.id === item.id);
     
     if (existingItem) {
@@ -71,7 +94,7 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
     onAddToCart({ ...item, quantity: 1 });
     toast({
       title: "Ditambahkan ke keranjang",
-      description: `${item.name} berhasil ditambahkan`,
+      description: `${item.food_items.name} berhasil ditambahkan`,
     });
   };
 
@@ -90,8 +113,8 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
     return item ? item.quantity : 0;
   };
 
-  const makananItems = foodItems.filter(item => item.category === 'makanan');
-  const minumanItems = foodItems.filter(item => item.category === 'minuman');
+  const makananItems = dailyMenus.filter(item => item.food_items.category === 'makanan');
+  const minumanItems = dailyMenus.filter(item => item.food_items.category === 'minuman');
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -109,27 +132,27 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
     );
   }
 
-  const FoodCard = ({ item }: { item: FoodItem }) => {
+  const FoodCard = ({ item }: { item: DailyMenu }) => {
     const quantity = getQuantity(item.id);
     
     return (
       <Card className="overflow-hidden hover:shadow-lg transition-shadow">
         <div className="aspect-square overflow-hidden">
           <img
-            src={item.image_url}
-            alt={item.name}
+            src={item.food_items.image_url}
+            alt={item.food_items.name}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
-            <CardTitle className="text-lg">{item.name}</CardTitle>
+            <CardTitle className="text-lg">{item.food_items.name}</CardTitle>
             <Badge variant="secondary" className="bg-gradient-to-r from-orange-100 to-red-100 text-orange-700">
               {formatPrice(item.price)}
             </Badge>
           </div>
           <CardDescription className="text-sm text-gray-600">
-            {item.description}
+            {item.food_items.description}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
@@ -177,51 +200,94 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
         <p className="text-gray-600">Pilih makanan dan minuman favorit untuk anak Anda</p>
       </div>
 
-      <Tabs defaultValue="semua" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
-          <TabsTrigger value="semua">Semua Menu</TabsTrigger>
-          <TabsTrigger value="makanan">Makanan</TabsTrigger>
-          <TabsTrigger value="minuman">Minuman</TabsTrigger>
-        </TabsList>
+      {/* Date Picker */}
+      <div className="flex justify-center mb-8">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-[280px] justify-start text-left font-normal",
+                !selectedDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {selectedDate ? format(selectedDate, 'PPP', { locale: idLocale }) : <span>Pilih tanggal</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              initialFocus
+              locale={idLocale}
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
 
-        <TabsContent value="semua">
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-2xl font-semibold mb-4 text-orange-600">Makanan</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {makananItems.map((item) => (
-                  <FoodCard key={item.id} item={item} />
-                ))}
-              </div>
+      {dailyMenus.length === 0 ? (
+        <Card className="text-center py-12">
+          <CardContent>
+            <h3 className="text-lg font-medium mb-2">Belum Ada Menu</h3>
+            <p className="text-gray-600 mb-4">
+              Belum ada menu untuk tanggal {format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="semua" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsTrigger value="semua">Semua Menu</TabsTrigger>
+            <TabsTrigger value="makanan">Makanan</TabsTrigger>
+            <TabsTrigger value="minuman">Minuman</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="semua">
+            <div className="space-y-8">
+              {makananItems.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-4 text-orange-600">Makanan</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {makananItems.map((item) => (
+                      <FoodCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {minumanItems.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-4 text-blue-600">Minuman</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {minumanItems.map((item) => (
+                      <FoodCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            
-            <div>
-              <h2 className="text-2xl font-semibold mb-4 text-blue-600">Minuman</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {minumanItems.map((item) => (
-                  <FoodCard key={item.id} item={item} />
-                ))}
-              </div>
+          </TabsContent>
+
+          <TabsContent value="makanan">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {makananItems.map((item) => (
+                <FoodCard key={item.id} item={item} />
+              ))}
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="makanan">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {makananItems.map((item) => (
-              <FoodCard key={item.id} item={item} />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="minuman">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {minumanItems.map((item) => (
-              <FoodCard key={item.id} item={item} />
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="minuman">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {minumanItems.map((item) => (
+                <FoodCard key={item.id} item={item} />
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
 
       {cart.length > 0 && (
         <div className="fixed bottom-4 right-4">
