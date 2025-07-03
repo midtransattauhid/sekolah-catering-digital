@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,6 +64,7 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
         .gte('date', new Date().toISOString().split('T')[0]);
 
       if (error) throw error;
+      console.log('Order schedules loaded:', data);
       setOrderSchedules(data || []);
     } catch (error) {
       console.error('Error fetching order schedules:', error);
@@ -74,6 +74,7 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
   const fetchDailyMenus = async () => {
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      console.log('Fetching daily menus for date:', dateStr);
       
       const { data, error } = await supabase
         .from('daily_menus')
@@ -90,8 +91,22 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
         .eq('is_available', true)
         .order('food_items(category)', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching daily menus:', error);
+        throw error;
+      }
+      
+      console.log('Daily menus loaded:', data);
       setDailyMenus(data || []);
+      
+      if (!data || data.length === 0) {
+        console.log('No daily menus found for date:', dateStr);
+        toast({
+          title: "Tidak ada menu",
+          description: `Belum ada menu untuk tanggal ${format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}. Silakan hubungi admin untuk menambahkan menu.`,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error fetching daily menus:', error);
       toast({
@@ -352,6 +367,16 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
         </Card>
       </div>
 
+      {/* Debug Info */}
+      <div className="mb-4 p-4 bg-gray-100 rounded-lg">
+        <p className="text-sm text-gray-600">
+          Debug: Tanggal dipilih: {format(selectedDate, 'yyyy-MM-dd')} | 
+          Total menu: {dailyMenus.length} | 
+          Makanan: {makananItems.length} | 
+          Minuman: {minumanItems.length}
+        </p>
+      </div>
+
       {dailyMenus.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
@@ -359,6 +384,9 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
             <h3 className="text-lg font-medium mb-2">Belum Ada Menu</h3>
             <p className="text-gray-600 mb-4">
               Belum ada menu untuk tanggal {format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}
+            </p>
+            <p className="text-sm text-gray-500">
+              Silakan hubungi admin untuk menambahkan menu atau pergi ke Admin > Populate Daily Menus
             </p>
           </CardContent>
         </Card>
