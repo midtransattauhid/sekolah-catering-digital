@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -383,7 +384,7 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
             <AlertTriangle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">Belum Ada Menu</h3>
             <p className="text-gray-600 mb-4">
-              Belum ada menu untuk tanggal {format(selectedDate, 'dd MMMV yyyy', { locale: idLocale })}
+              Belum ada menu untuk tanggal {format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}
             </p>
             <p className="text-sm text-gray-500">
               Silakan hubungi admin untuk menambahkan menu atau pergi ke Admin {`>`} Populate Daily Menus
