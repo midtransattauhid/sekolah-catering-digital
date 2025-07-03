@@ -9,7 +9,7 @@ import { CalendarIcon, User, Clock, AlertTriangle, Plus, Minus, ShoppingCart } f
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
-import { format, isBefore, isToday, parseISO } from 'date-fns';
+import { format, isBefore, isToday } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
 interface Child {
@@ -51,7 +51,7 @@ interface CartItem {
   quantity: number;
   date: string;
   child_id: string;
-  food_item_id: string; // Add this field
+  food_item_id: string;
 }
 
 const OrderFood = () => {
@@ -188,6 +188,19 @@ const OrderFood = () => {
       return { status: 'full', message: 'Kuota penuh' };
     }
     
+    // Check cutoff time
+    if (schedule) {
+      const cutoffDate = schedule.cutoff_date ? new Date(schedule.cutoff_date) : new Date(date);
+      cutoffDate.setDate(cutoffDate.getDate() - 1); // H-1
+      
+      const [hours, minutes] = schedule.cutoff_time.split(':');
+      cutoffDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      if (new Date() > cutoffDate) {
+        return { status: 'expired', message: 'Batas waktu pesan sudah lewat' };
+      }
+    }
+    
     return { status: 'available', message: 'Tersedia' };
   };
 
@@ -204,6 +217,16 @@ const OrderFood = () => {
       toast({
         title: "Pilih anak dan tanggal",
         description: "Mohon pilih anak dan tanggal terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if date is still available
+    if (isDateDisabled(selectedDate)) {
+      toast({
+        title: "Tanggal tidak tersedia",
+        description: "Tanggal yang dipilih sudah tidak bisa dipesan",
         variant: "destructive",
       });
       return;
@@ -230,7 +253,7 @@ const OrderFood = () => {
         quantity: 1,
         date: dateStr,
         child_id: selectedChild,
-        food_item_id: menu.food_item_id // Store the full UUID
+        food_item_id: menu.food_item_id
       };
       setCart([...cart, newItem]);
     }
@@ -326,7 +349,7 @@ const OrderFood = () => {
         // Create order items using the stored food_item_id
         const orderItems = orderGroup.items.map((item: CartItem) => ({
           order_id: order.id,
-          food_item_id: item.food_item_id, // Use the full UUID stored in cart
+          food_item_id: item.food_item_id,
           quantity: item.quantity,
           price: item.price
         }));
@@ -490,6 +513,8 @@ const OrderFood = () => {
                   <div className="space-y-4">
                     {dailyMenus.map((menu) => {
                       const quantity = getCartQuantity(menu);
+                      const dateDisabled = isDateDisabled(selectedDate);
+                      
                       return (
                         <div key={menu.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50">
                           <img
@@ -506,7 +531,11 @@ const OrderFood = () => {
                             </Badge>
                           </div>
                           <div className="flex items-center space-x-2">
-                            {quantity > 0 ? (
+                            {dateDisabled ? (
+                              <Badge variant="destructive" className="text-xs">
+                                Tidak tersedia
+                              </Badge>
+                            ) : quantity > 0 ? (
                               <>
                                 <Button
                                   size="sm"

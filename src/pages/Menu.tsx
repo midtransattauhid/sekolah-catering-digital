@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Minus, ShoppingCart, CalendarIcon } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, CalendarIcon, AlertTriangle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { format } from 'date-fns';
+import { format, isBefore, isToday } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CartItem } from '@/types/cart';
@@ -30,15 +30,46 @@ interface DailyMenu {
   };
 }
 
+interface OrderSchedule {
+  date: string;
+  is_blocked: boolean;
+  cutoff_time: string;
+  cutoff_date: string | null;
+  max_orders: number | null;
+  current_orders: number;
+  notes: string | null;
+}
+
 const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
   const [dailyMenus, setDailyMenus] = useState<DailyMenu[]>([]);
+  const [orderSchedules, setOrderSchedules] = useState<OrderSchedule[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
-    fetchDailyMenus();
+    fetchOrderSchedules();
+  }, []);
+
+  useEffect(() => {
+    if (selectedDate) {
+      fetchDailyMenus();
+    }
   }, [selectedDate]);
+
+  const fetchOrderSchedules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('order_schedules')
+        .select('*')
+        .gte('date', new Date().toISOString().split('T')[0]);
+
+      if (error) throw error;
+      setOrderSchedules(data || []);
+    } catch (error) {
+      console.error('Error fetching order schedules:', error);
+    }
+  };
 
   const fetchDailyMenus = async () => {
     try {
@@ -73,7 +104,66 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
     }
   };
 
+  const isDateDisabled = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const schedule = orderSchedules.find(s => s.date === dateStr);
+    
+    // Disable if date is blocked
+    if (schedule?.is_blocked) return true;
+    
+    // Disable if max orders reached
+    if (schedule?.max_orders && schedule.current_orders >= schedule.max_orders) return true;
+    
+    // Check cutoff time
+    if (schedule) {
+      const cutoffDate = schedule.cutoff_date ? new Date(schedule.cutoff_date) : new Date(date);
+      cutoffDate.setDate(cutoffDate.getDate() - 1); // H-1
+      
+      const [hours, minutes] = schedule.cutoff_time.split(':');
+      cutoffDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      if (new Date() > cutoffDate) return true;
+    } else {
+      // Default: disable if it's past 15:00 on H-1
+      const cutoffDate = new Date(date);
+      cutoffDate.setDate(cutoffDate.getDate() - 1);
+      cutoffDate.setHours(15, 0, 0, 0);
+      
+      if (new Date() > cutoffDate) return true;
+    }
+    
+    // Disable past dates
+    if (isBefore(date, new Date()) && !isToday(date)) return true;
+    
+    return false;
+  };
+
+  const getDateStatus = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const schedule = orderSchedules.find(s => s.date === dateStr);
+    
+    if (schedule?.is_blocked) {
+      return { status: 'blocked', message: schedule.notes || 'Tanggal diblokir' };
+    }
+    
+    if (schedule?.max_orders && schedule.current_orders >= schedule.max_orders) {
+      return { status: 'full', message: 'Kuota penuh' };
+    }
+    
+    return { status: 'available', message: 'Tersedia' };
+  };
+
   const addToCart = (item: DailyMenu) => {
+    // Check if date is still available
+    if (isDateDisabled(selectedDate)) {
+      toast({
+        title: "Tanggal tidak tersedia",
+        description: "Tanggal yang dipilih sudah tidak bisa dipesan",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Transform DailyMenu to CartItem
     const cartItem: CartItem = {
       id: item.id,
@@ -139,6 +229,7 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
 
   const FoodCard = ({ item }: { item: DailyMenu }) => {
     const quantity = getQuantity(item.id);
+    const dateDisabled = isDateDisabled(selectedDate);
     
     return (
       <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -161,7 +252,13 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          {quantity > 0 ? (
+          {dateDisabled ? (
+            <div className="text-center py-2">
+              <Badge variant="destructive" className="text-xs">
+                Tidak tersedia
+              </Badge>
+            </div>
+          ) : quantity > 0 ? (
             <div className="flex items-center justify-between">
               <Button
                 size="sm"
@@ -196,17 +293,19 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
     );
   };
 
+  const selectedDateStatus = getDateStatus(selectedDate);
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
           Menu Makanan & Minuman
         </h1>
-        <p className="text-gray-600">Pilih makanan dan minuman favorit untuk anak Anda</p>
+        <p className="text-gray-600">Pilih tanggal dan makanan favorit untuk anak Anda</p>
       </div>
 
       {/* Date Picker */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-6">
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -225,6 +324,7 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && setSelectedDate(date)}
+              disabled={isDateDisabled}
               initialFocus
               locale={idLocale}
               className="pointer-events-auto"
@@ -233,9 +333,29 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
         </Popover>
       </div>
 
+      {/* Date Status */}
+      <div className="flex justify-center mb-8">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-2">
+                Status untuk {format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}
+              </p>
+              <Badge 
+                variant={selectedDateStatus.status === 'available' ? 'default' : 'destructive'}
+                className={selectedDateStatus.status === 'available' ? 'bg-green-100 text-green-800' : ''}
+              >
+                {selectedDateStatus.message}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {dailyMenus.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
+            <AlertTriangle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">Belum Ada Menu</h3>
             <p className="text-gray-600 mb-4">
               Belum ada menu untuk tanggal {format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}
@@ -294,7 +414,7 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
         </Tabs>
       )}
 
-      {cart.length > 0 && (
+      {cart.length > 0 && !isDateDisabled(selectedDate) && (
         <div className="fixed bottom-4 right-4">
           <Button
             size="lg"
