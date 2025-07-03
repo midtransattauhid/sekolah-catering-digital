@@ -12,6 +12,7 @@ import { toast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { CartItem } from '@/types/cart';
 
 interface DailyMenu {
   id: string;
@@ -27,10 +28,6 @@ interface DailyMenu {
     image_url: string;
     category: 'makanan' | 'minuman';
   };
-}
-
-interface CartItem extends DailyMenu {
-  quantity: number;
 }
 
 const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
@@ -77,6 +74,15 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
   };
 
   const addToCart = (item: DailyMenu) => {
+    // Transform DailyMenu to CartItem
+    const cartItem: CartItem = {
+      id: item.id,
+      name: item.food_items.name,
+      price: item.price,
+      quantity: 1,
+      image_url: item.food_items.image_url
+    };
+
     const existingItem = cart.find(cartItem => cartItem.id === item.id);
     
     if (existingItem) {
@@ -87,11 +93,10 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
       );
       setCart(updatedCart);
     } else {
-      const newCartItem = { ...item, quantity: 1 };
-      setCart([...cart, newCartItem]);
+      setCart([...cart, cartItem]);
     }
 
-    onAddToCart({ ...item, quantity: 1 });
+    onAddToCart(cartItem);
     toast({
       title: "Ditambahkan ke keranjang",
       description: `${item.food_items.name} berhasil ditambahkan`,

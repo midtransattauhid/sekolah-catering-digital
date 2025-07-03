@@ -2,14 +2,7 @@
 import { useState } from 'react';
 import Menu from './Menu';
 import Cart from '@/components/Cart';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image_url: string;
-}
+import { CartItem } from '@/types/cart';
 
 const Index = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);

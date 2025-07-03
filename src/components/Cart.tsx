@@ -9,6 +9,7 @@ import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
+import { CartItem } from '@/types/cart';
 
 declare global {
   interface Window {
@@ -21,14 +22,6 @@ declare global {
       }) => void;
     };
   }
-}
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image_url: string;
 }
 
 interface Child {
