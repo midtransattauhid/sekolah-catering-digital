@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Minus, ShoppingCart, CalendarIcon, AlertTriangle } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, CalendarIcon, AlertTriangle, Info } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { format, isBefore, isToday } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -46,6 +45,15 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [debugInfo, setDebugInfo] = useState<{
+    hasSchedule: boolean;
+    hasMenus: boolean;
+    totalFoodItems: number;
+  }>({
+    hasSchedule: false,
+    hasMenus: false,
+    totalFoodItems: 0
+  });
 
   useEffect(() => {
     fetchOrderSchedules();
@@ -77,6 +85,15 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       console.log('Fetching daily menus for date:', dateStr);
       
+      // Check if there's a schedule for this date
+      const schedule = orderSchedules.find(s => s.date === dateStr);
+      
+      // Also check total food items available
+      const { data: foodItemsData } = await supabase
+        .from('food_items')
+        .select('id')
+        .eq('is_available', true);
+      
       const { data, error } = await supabase
         .from('daily_menus')
         .select(`
@@ -100,13 +117,36 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
       console.log('Daily menus loaded:', data);
       setDailyMenus(data || []);
       
+      // Update debug info
+      setDebugInfo({
+        hasSchedule: !!schedule,
+        hasMenus: (data || []).length > 0,
+        totalFoodItems: foodItemsData?.length || 0
+      });
+      
       if (!data || data.length === 0) {
         console.log('No daily menus found for date:', dateStr);
-        toast({
-          title: "Tidak ada menu",
-          description: `Belum ada menu untuk tanggal ${format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}. Silakan hubungi admin untuk menambahkan menu.`,
-          variant: "destructive",
-        });
+        
+        // Different error messages based on the situation
+        if (!schedule) {
+          toast({
+            title: "Jadwal belum diatur",
+            description: `Belum ada jadwal untuk tanggal ${format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}. Silakan atur di Admin > Manajemen Jadwal & Kuota terlebih dahulu.`,
+            variant: "destructive",
+          });
+        } else if (foodItemsData && foodItemsData.length === 0) {
+          toast({
+            title: "Belum ada makanan",
+            description: "Belum ada makanan yang tersedia. Silakan tambahkan makanan di Admin > Food Management terlebih dahulu.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Menu belum dibuat",
+            description: `Jadwal sudah diatur tapi menu belum dibuat untuk tanggal ${format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}. Silakan pergi ke Admin > Populate Daily Menus untuk membuat menu.`,
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching daily menus:', error);
@@ -368,14 +408,35 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
         </Card>
       </div>
 
-      {/* Debug Info */}
+      {/* Enhanced Debug Info */}
       <div className="mb-4 p-4 bg-gray-100 rounded-lg">
-        <p className="text-sm text-gray-600">
-          Debug: Tanggal dipilih: {format(selectedDate, 'yyyy-MM-dd')} | 
-          Total menu: {dailyMenus.length} | 
-          Makanan: {makananItems.length} | 
-          Minuman: {minumanItems.length}
-        </p>
+        <div className="flex items-center mb-2">
+          <Info className="h-4 w-4 mr-2 text-blue-500" />
+          <span className="text-sm font-medium text-gray-700">Informasi Debug:</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+          <div>
+            <span className="font-medium">Tanggal:</span> {format(selectedDate, 'yyyy-MM-dd')}
+          </div>
+          <div>
+            <span className="font-medium">Ada Jadwal:</span> 
+            <Badge variant={debugInfo.hasSchedule ? 'default' : 'destructive'} className="ml-1 text-xs">
+              {debugInfo.hasSchedule ? 'Ya' : 'Tidak'}
+            </Badge>
+          </div>
+          <div>
+            <span className="font-medium">Ada Menu:</span> 
+            <Badge variant={debugInfo.hasMenus ? 'default' : 'destructive'} className="ml-1 text-xs">
+              {debugInfo.hasMenus ? 'Ya' : 'Tidak'}
+            </Badge>
+          </div>
+          <div>
+            <span className="font-medium">Total Makanan:</span> {debugInfo.totalFoodItems}
+          </div>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">
+          Menu: {dailyMenus.length} | Makanan: {makananItems.length} | Minuman: {minumanItems.length}
+        </div>
       </div>
 
       {dailyMenus.length === 0 ? (
@@ -383,12 +444,34 @@ const Menu = ({ onAddToCart }: { onAddToCart: (item: CartItem) => void }) => {
           <CardContent>
             <AlertTriangle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">Belum Ada Menu</h3>
-            <p className="text-gray-600 mb-4">
-              Belum ada menu untuk tanggal {format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}
-            </p>
-            <p className="text-sm text-gray-500">
-              Silakan hubungi admin untuk menambahkan menu atau pergi ke Admin {`>`} Populate Daily Menus
-            </p>
+            <div className="space-y-2 mb-4">
+              {!debugInfo.hasSchedule && (
+                <p className="text-red-600">
+                  ❌ Jadwal belum diatur untuk tanggal {format(selectedDate, 'dd MMMM yyyy', { locale: idLocale })}
+                </p>
+              )}
+              {debugInfo.hasSchedule && !debugInfo.hasMenus && debugInfo.totalFoodItems === 0 && (
+                <p className="text-red-600">
+                  ❌ Belum ada makanan yang tersedia di sistem
+                </p>
+              )}
+              {debugInfo.hasSchedule && !debugInfo.hasMenus && debugInfo.totalFoodItems > 0 && (
+                <p className="text-red-600">
+                  ❌ Menu belum dibuat untuk tanggal ini (ada {debugInfo.totalFoodItems} makanan tersedia)
+                </p>
+              )}
+            </div>
+            <div className="space-y-2 text-sm text-gray-600">
+              {!debugInfo.hasSchedule && (
+                <p>1. Pergi ke Admin {'>'} Manajemen Jadwal & Kuota</p>
+              )}
+              {debugInfo.totalFoodItems === 0 && (
+                <p>2. Tambahkan makanan di Admin {'>'} Food Management</p>
+              )}
+              {debugInfo.hasSchedule && debugInfo.totalFoodItems > 0 && !debugInfo.hasMenus && (
+                <p>3. Buat menu di Admin {'>'} Populate Daily Menus</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
