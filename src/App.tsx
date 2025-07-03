@@ -22,6 +22,7 @@ import FoodManagement from "./pages/admin/FoodManagement";
 import OrderManagement from "./pages/admin/OrderManagement";
 import ScheduleManagement from "./pages/admin/ScheduleManagement";
 import Reports from "./pages/admin/Reports";
+import PopulateDailyMenus from "./pages/admin/PopulateDailyMenus";
 
 const queryClient = new QueryClient();
 
@@ -158,6 +159,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute adminOnly={true}>
               <Reports />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/populate-daily-menus" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <PopulateDailyMenus />
             </ProtectedRoute>
           } 
         />

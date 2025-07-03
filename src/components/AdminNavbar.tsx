@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Utensils, ShoppingBag, Calendar, FileText, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Utensils, ShoppingBag, Calendar, FileText, LogOut, Menu, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -41,6 +41,11 @@ const AdminNavbar = () => {
       name: "Jadwal & Kuota",
       href: "/admin/schedule-management",
       icon: Calendar,
+    },
+    {
+      name: "Populate Daily Menus",
+      href: "/admin/populate-daily-menus",
+      icon: Plus,
     },
     {
       name: "Laporan",
