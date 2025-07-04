@@ -25,7 +25,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Menu onAddToCart={handleAddToCart} />
+      <Menu />
       <Cart items={cartItems} onUpdateCart={setCartItems} />
     </div>
   );
