@@ -151,10 +151,10 @@ const Cart = ({ items, onUpdateCart }: CartProps) => {
 
       if (orderError) throw orderError;
 
-      // Create order items
+      // Create order items using the correct food_item_id from the cart items
       const orderItems = items.map(item => ({
         order_id: order.id,
-        food_item_id: item.id,
+        food_item_id: item.food_item_id, // Use the food_item_id from cart item
         quantity: item.quantity,
         price: item.price
       }));

@@ -51,6 +51,7 @@ interface CartItem {
   date: string;
   child_id: string;
   food_item_id: string;
+  image_url?: string;
 }
 
 const OrderFood = () => {
@@ -253,7 +254,8 @@ const OrderFood = () => {
         quantity: 1,
         date: dateStr,
         child_id: selectedChild,
-        food_item_id: menu.food_item_id // Use the correct food_item_id
+        food_item_id: menu.food_item_id, // Use the correct food_item_id
+        image_url: menu.food_items.image_url // Add image_url for Cart component
       };
       setCart([...cart, newItem]);
     }
