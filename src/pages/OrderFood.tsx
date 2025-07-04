@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -233,6 +232,7 @@ const OrderFood = () => {
     }
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    // Use food_item_id instead of daily_menu id
     const cartItemId = `${menu.food_item_id}-${dateStr}-${selectedChild}`;
     
     const existingItem = cart.find(item => 
@@ -253,7 +253,7 @@ const OrderFood = () => {
         quantity: 1,
         date: dateStr,
         child_id: selectedChild,
-        food_item_id: menu.food_item_id
+        food_item_id: menu.food_item_id // Use the correct food_item_id
       };
       setCart([...cart, newItem]);
     }
@@ -280,6 +280,7 @@ const OrderFood = () => {
     if (!selectedChild || !selectedDate) return 0;
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    // Use food_item_id for consistency
     const cartItemId = `${menu.food_item_id}-${dateStr}-${selectedChild}`;
     const item = cart.find(item => item.id === cartItemId);
     return item ? item.quantity : 0;
@@ -346,10 +347,10 @@ const OrderFood = () => {
 
         if (orderError) throw orderError;
 
-        // Create order items using the stored food_item_id
+        // Create order items using the correct food_item_id
         const orderItems = orderGroup.items.map((item: CartItem) => ({
           order_id: order.id,
-          food_item_id: item.food_item_id,
+          food_item_id: item.food_item_id, // This is now the correct food_item_id
           quantity: item.quantity,
           price: item.price
         }));
