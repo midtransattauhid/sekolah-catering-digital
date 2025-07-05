@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Download, FileText, Calendar, Users, Printer } from 'lucide-react';
+import { Download, FileText, Calendar, Users, Printer, CreditCard, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -41,6 +42,7 @@ const OrderRecap = () => {
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState<string>('all');
 
   useEffect(() => {
     const today = new Date();
@@ -49,19 +51,20 @@ const OrderRecap = () => {
     setStartDate(todayStr);
     setEndDate(todayStr);
     
-    fetchRecapData(todayStr, todayStr);
+    fetchRecapData(todayStr, todayStr, 'all');
   }, []);
 
-  const fetchRecapData = async (start?: string, end?: string) => {
+  const fetchRecapData = async (start?: string, end?: string, payment?: string) => {
     try {
       setLoading(true);
       
       const startDateFilter = start || startDate;
       const endDateFilter = end || endDate;
+      const paymentStatusFilter = payment || paymentFilter;
       
-      console.log('Fetching recap data for:', startDateFilter, 'to', endDateFilter);
+      console.log('Fetching recap data for:', startDateFilter, 'to', endDateFilter, 'payment:', paymentStatusFilter);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           order_date,
@@ -69,6 +72,7 @@ const OrderRecap = () => {
           child_class,
           total_amount,
           status,
+          payment_status,
           order_items (
             quantity,
             price,
@@ -81,6 +85,15 @@ const OrderRecap = () => {
         .lte('order_date', endDateFilter)
         .neq('status', 'cancelled')
         .order('order_date', { ascending: false });
+
+      // Add payment status filter
+      if (paymentStatusFilter === 'paid') {
+        query = query.eq('payment_status', 'paid');
+      } else if (paymentStatusFilter === 'unpaid') {
+        query = query.neq('payment_status', 'paid');
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -158,7 +171,16 @@ const OrderRecap = () => {
       });
       return;
     }
-    fetchRecapData();
+    fetchRecapData(startDate, endDate, paymentFilter);
+  };
+
+  const getPaymentStatusText = (status: string) => {
+    switch (status) {
+      case 'all': return 'Semua Status';
+      case 'paid': return 'Sudah Bayar';
+      case 'unpaid': return 'Belum Bayar';
+      default: return status;
+    }
   };
 
   const printReport = () => {
@@ -268,6 +290,7 @@ const OrderRecap = () => {
         <div class="header">
           <h1>Rekapitulasi Pesanan</h1>
           <p>Periode: ${startDate === endDate ? format(new Date(startDate), 'dd MMMM yyyy', { locale: id }) : `${format(new Date(startDate), 'dd MMMM yyyy', { locale: id })} - ${format(new Date(endDate), 'dd MMMM yyyy', { locale: id })}`}</p>
+          <p>Status Pembayaran: ${getPaymentStatusText(paymentFilter)}</p>
           <p>Dicetak pada: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}</p>
         </div>
 
@@ -370,7 +393,7 @@ const OrderRecap = () => {
     ]);
 
     const csvContent = [
-      'REKAPITULASI MENU (GABUNGAN)',
+      `REKAPITULASI MENU (${getPaymentStatusText(paymentFilter).toUpperCase()})`,
       menuHeaders.join(','),
       ...menuData.map(row => row.join(',')),
       '',
@@ -447,10 +470,10 @@ const OrderRecap = () => {
       {/* Filter Section */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base md:text-lg">Filter Tanggal</CardTitle>
+          <CardTitle className="text-base md:text-lg">Filter Tanggal & Status Pembayaran</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <Label htmlFor="start-date" className="text-xs md:text-sm">Tanggal Mulai</Label>
               <Input
@@ -471,6 +494,29 @@ const OrderRecap = () => {
                 onChange={(e) => setEndDate(e.target.value)}
                 className="text-xs md:text-sm h-8 md:h-10"
               />
+            </div>
+
+            <div>
+              <Label className="text-xs md:text-sm">Status Pembayaran</Label>
+              <ToggleGroup 
+                type="single" 
+                value={paymentFilter} 
+                onValueChange={(value) => value && setPaymentFilter(value)}
+                className="justify-start mt-1"
+              >
+                <ToggleGroupItem value="all" aria-label="Semua" className="text-xs h-8 md:h-10 px-2">
+                  <FileText className="h-3 w-3 mr-1" />
+                  Semua
+                </ToggleGroupItem>
+                <ToggleGroupItem value="paid" aria-label="Sudah Bayar" className="text-xs h-8 md:h-10 px-2">
+                  <CreditCard className="h-3 w-3 mr-1" />
+                  Bayar
+                </ToggleGroupItem>
+                <ToggleGroupItem value="unpaid" aria-label="Belum Bayar" className="text-xs h-8 md:h-10 px-2">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Belum
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
             
             <div className="flex items-end">
@@ -523,7 +569,9 @@ const OrderRecap = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-base md:text-xl">Rekapitulasi Menu (Gabungan)</CardTitle>
-          <CardDescription className="text-xs md:text-sm">Total pesanan semua menu tanpa pembagian kelas</CardDescription>
+          <CardDescription className="text-xs md:text-sm">
+            Total pesanan semua menu tanpa pembagian kelas - {getPaymentStatusText(paymentFilter)}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {recapData.menuSummary.length > 0 ? (
@@ -561,7 +609,9 @@ const OrderRecap = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-base md:text-xl">Rekapitulasi Menu Per Kelas</CardTitle>
-          <CardDescription className="text-xs md:text-sm">Detail pesanan berdasarkan kelas</CardDescription>
+          <CardDescription className="text-xs md:text-sm">
+            Detail pesanan berdasarkan kelas - {getPaymentStatusText(paymentFilter)}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {recapData.classMenuSummary.length > 0 ? (
