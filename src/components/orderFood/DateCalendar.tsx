@@ -3,6 +3,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarIcon } from 'lucide-react';
 import { id as idLocale } from 'date-fns/locale';
+import { isWeekend } from 'date-fns';
 
 interface OrderSchedule {
   date: string;
@@ -42,6 +43,10 @@ const DateCalendar = ({ selectedDate, onDateSelect, orderSchedules, isDateDisabl
         
         {/* Legend */}
         <div className="mt-4 space-y-2">
+          <div className="flex items-center text-sm">
+            <div className="w-3 h-3 bg-gray-400 rounded mr-2"></div>
+            <span>Sabtu & Minggu (Tutup)</span>
+          </div>
           <div className="flex items-center text-sm">
             <div className="w-3 h-3 bg-red-200 rounded mr-2"></div>
             <span>Tanggal diblokir/penuh</span>

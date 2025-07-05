@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { format, isBefore, isToday } from 'date-fns';
+import { format, isBefore, isToday, isWeekend } from 'date-fns';
 
 interface OrderSchedule {
   date: string;
@@ -38,6 +38,9 @@ export const useOrderSchedules = () => {
   };
 
   const isDateDisabled = (date: Date) => {
+    // Disable weekends first
+    if (isWeekend(date)) return true;
+    
     const dateStr = format(date, 'yyyy-MM-dd');
     const schedule = orderSchedules.find(s => s.date === dateStr);
     
@@ -72,6 +75,11 @@ export const useOrderSchedules = () => {
   };
 
   const getDateStatus = (date: Date) => {
+    // Check weekend first
+    if (isWeekend(date)) {
+      return { status: 'closed', message: 'Tutup di hari Sabtu & Minggu' };
+    }
+    
     const dateStr = format(date, 'yyyy-MM-dd');
     const schedule = orderSchedules.find(s => s.date === dateStr);
     

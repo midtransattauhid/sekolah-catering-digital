@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, User, ShoppingBag, CalendarIcon, LogOut, Settings } from "lucide-react";
+import { Home, User, ShoppingBag, LogOut, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,16 +35,7 @@ const Navbar = () => {
             onClick={() => navigate('/')}
           >
             <Home className="h-4 w-4 mr-2" />
-            Menu
-          </Button>
-          
-          <Button
-            variant="ghost"
-            className="text-white hover:bg-white/10"
-            onClick={() => navigate('/order-food')}
-          >
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            Pesan Katering
+            Menu & Pesan
           </Button>
           
           <Button
