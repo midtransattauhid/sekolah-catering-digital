@@ -89,6 +89,7 @@ const Reports = () => {
           toDate = endDateFilter;
       }
 
+      // Fetch orders
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('*')
@@ -98,23 +99,49 @@ const Reports = () => {
 
       if (ordersError) throw ordersError;
 
-      const { data: popularItems, error: popularItemsError } = await supabase.rpc('get_popular_food_items', {
-        start_date: fromDate,
-        end_date: toDate,
+      // Fetch popular items using a proper query
+      const { data: orderItems, error: orderItemsError } = await supabase
+        .from('order_items')
+        .select(`
+          quantity,
+          food_items!inner(name),
+          orders!inner(order_date)
+        `)
+        .gte('orders.order_date', fromDate)
+        .lte('orders.order_date', toDate);
+
+      if (orderItemsError) throw orderItemsError;
+
+      // Process popular items
+      const itemCounts: { [key: string]: number } = {};
+      orderItems?.forEach(item => {
+        const foodName = (item.food_items as any).name;
+        if (foodName) {
+          itemCounts[foodName] = (itemCounts[foodName] || 0) + item.quantity;
+        }
       });
 
-      if (popularItemsError) throw popularItemsError;
+      const popularItems = Object.entries(itemCounts)
+        .map(([name, total_sold]) => ({ name, total_sold }))
+        .sort((a, b) => b.total_sold - a.total_sold)
+        .slice(0, 10);
 
-      const { data: dailySales, error: dailySalesError } = await supabase.rpc('get_daily_sales', {
-        start_date: fromDate,
-        end_date: toDate,
+      // Process daily sales
+      const salesByDate: { [key: string]: number } = {};
+      orders?.forEach(order => {
+        const date = order.order_date;
+        if (date) {
+          salesByDate[date] = (salesByDate[date] || 0) + (order.total_amount || 0);
+        }
       });
 
-      if (dailySalesError) throw dailySalesError;
+      const dailySales = Object.entries(salesByDate)
+        .map(([sales_date, total_sales]) => ({ sales_date, total_sales }))
+        .sort((a, b) => new Date(a.sales_date).getTime() - new Date(b.sales_date).getTime());
 
       const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
       const totalOrders = orders?.length || 0;
-      const totalItems = popularItems?.reduce((sum, item) => sum + (item.total_sold || 0), 0) || 0;
+      const totalItems = popularItems.reduce((sum, item) => sum + item.total_sold, 0);
       const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
       setReportData({
