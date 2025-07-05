@@ -23,7 +23,7 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="bg-orange-500 text-white py-2 md:py-3 shadow-md">
+    <div className="sticky top-0 z-50 bg-orange-500 text-white py-2 md:py-3 shadow-md">
       <div className="container mx-auto px-3 md:px-4 flex items-center justify-between">
         <Link to="/" className="text-lg md:text-2xl font-bold truncate">
           CateringKu
@@ -117,50 +117,50 @@ const Navbar = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
-        {/* Mobile Navigation Menu */}
-        {isMobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-orange-500 border-t border-orange-400 lg:hidden z-50">
-            <div className="container mx-auto px-3 py-3 space-y-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-white hover:bg-white/10 text-sm h-8"
-                onClick={() => {
-                  navigate('/');
-                  setIsMobileMenuOpen(false);
-                }}
-              >
-                <Home className="h-4 w-4 mr-2" />
-                Menu & Pesan
-              </Button>
-              
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-white hover:bg-white/10 text-sm h-8"
-                onClick={() => {
-                  navigate('/children');
-                  setIsMobileMenuOpen(false);
-                }}
-              >
-                <User className="h-4 w-4 mr-2" />
-                Data Anak
-              </Button>
-              
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-white hover:bg-white/10 text-sm h-8"
-                onClick={() => {
-                  navigate('/orders');
-                  setIsMobileMenuOpen(false);
-                }}
-              >
-                <ShoppingBag className="h-4 w-4 mr-2" />
-                Riwayat Pesanan
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Mobile Navigation Menu */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden border-t border-orange-400 bg-orange-500">
+          <div className="container mx-auto px-3 py-3 space-y-1">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-white hover:bg-white/10 text-sm h-8"
+              onClick={() => {
+                navigate('/');
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Menu & Pesan
+            </Button>
+            
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-white hover:bg-white/10 text-sm h-8"
+              onClick={() => {
+                navigate('/children');
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <User className="h-4 w-4 mr-2" />
+              Data Anak
+            </Button>
+            
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-white hover:bg-white/10 text-sm h-8"
+              onClick={() => {
+                navigate('/orders');
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              Riwayat Pesanan
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

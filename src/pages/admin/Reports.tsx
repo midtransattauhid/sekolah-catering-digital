@@ -1,60 +1,136 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Download, FileText, Calendar, TrendingUp, Users, DollarSign } from 'lucide-react';
-import { formatPrice } from '@/utils/orderUtils';
+import { Download, FileText, Calendar, TrendingUp, Users, ShoppingBag, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 
-interface SalesSummary {
-  order_date: string;
-  total_orders: number;
-  total_revenue: number;
-  avg_order_value: number;
-  completed_orders: number;
-  cancelled_orders: number;
+interface ReportData {
+  totalRevenue: number;
+  totalOrders: number;
+  totalItems: number;
+  averageOrderValue: number;
+  orders: any[];
+  popularItems: any[];
+  dailySales: any[];
 }
 
+interface PopularItem {
+  name: string;
+  total_sold: number;
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
 const Reports = () => {
-  const [salesData, setSalesData] = useState<SalesSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(false);
   const [reportType, setReportType] = useState('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
-    // Set default dates (last 30 days)
     const today = new Date();
-    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const todayStr = format(today, 'yyyy-MM-dd');
     
-    setEndDate(format(today, 'yyyy-MM-dd'));
-    setStartDate(format(thirtyDaysAgo, 'yyyy-MM-dd'));
+    setStartDate(todayStr);
+    setEndDate(todayStr);
     
-    fetchSalesData();
-  }, []);
+    fetchReportData(reportType, todayStr, todayStr);
+  }, [reportType]);
 
-  const fetchSalesData = async () => {
+  const fetchReportData = async (type: string, start?: string, end?: string) => {
     try {
-      const { data, error } = await supabase
-        .from('sales_summary')
-        .select('*')
-        .order('order_date', { ascending: false })
-        .limit(30);
+      setLoading(true);
 
-      if (error) throw error;
-      setSalesData(data || []);
+      const startDateFilter = start || startDate;
+      const endDateFilter = end || endDate;
+
+      let fromDate: string, toDate: string;
+
+      switch (type) {
+        case 'daily':
+          fromDate = startDateFilter;
+          toDate = endDateFilter;
+          break;
+        case 'weekly':
+          const startOfWeek = format(new Date(startDateFilter), 'yyyy-MM-dd', { weekStartsOn: 1 });
+          const endOfWeek = format(new Date(startDateFilter), 'yyyy-MM-dd', { weekStartsOn: 1 });
+          fromDate = startOfWeek;
+          toDate = endOfWeek;
+          break;
+        case 'monthly':
+          const startOfMonth = format(new Date(startDateFilter), 'yyyy-MM-01');
+          const endOfMonth = format(new Date(startDateFilter), 'yyyy-MM-dd');
+          fromDate = startOfMonth;
+          toDate = endOfMonth;
+          break;
+        default:
+          fromDate = startDateFilter;
+          toDate = endDateFilter;
+      }
+
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .gte('order_date', fromDate)
+        .lte('order_date', toDate)
+        .neq('status', 'cancelled');
+
+      if (ordersError) throw ordersError;
+
+      const { data: popularItems, error: popularItemsError } = await supabase.rpc('get_popular_food_items', {
+        start_date: fromDate,
+        end_date: toDate,
+      });
+
+      if (popularItemsError) throw popularItemsError;
+
+      const { data: dailySales, error: dailySalesError } = await supabase.rpc('get_daily_sales', {
+        start_date: fromDate,
+        end_date: toDate,
+      });
+
+      if (dailySalesError) throw dailySalesError;
+
+      const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+      const totalOrders = orders?.length || 0;
+      const totalItems = popularItems?.reduce((sum, item) => sum + (item.total_sold || 0), 0) || 0;
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      setReportData({
+        totalRevenue,
+        totalOrders,
+        totalItems,
+        averageOrderValue,
+        orders: orders || [],
+        popularItems: popularItems || [],
+        dailySales: dailySales || [],
+      });
     } catch (error) {
-      console.error('Error fetching sales data:', error);
+      console.error('Error fetching report data:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat data penjualan",
+        description: "Gagal memuat data laporan",
         variant: "destructive",
       });
     } finally {
@@ -62,32 +138,38 @@ const Reports = () => {
     }
   };
 
+  const handleFilter = () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "Error",
+        description: "Mohon pilih tanggal mulai dan akhir",
+        variant: "destructive",
+      });
+      return;
+    }
+    fetchReportData(reportType);
+  };
+
   const exportToCSV = () => {
-    if (salesData.length === 0) return;
+    if (!reportData || reportData.orders.length === 0) {
+      toast({
+        title: "Error",
+        description: "Tidak ada data untuk diekspor",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const csvHeaders = [
-      'Tanggal',
-      'Total Pesanan',
-      'Total Pendapatan',
-      'Rata-rata Nilai Pesanan',
-      'Pesanan Selesai',
-      'Pesanan Dibatalkan'
-    ];
-
-    const csvData = salesData.map(row => [
-      format(new Date(row.order_date), 'dd/MM/yyyy'),
-      row.total_orders,
-      row.total_revenue,
-      row.avg_order_value,
-      row.completed_orders,
-      row.cancelled_orders
+    const headers = ['Tanggal', 'Nama Anak', 'Kelas', 'Total', 'Status'];
+    const csvData = reportData.orders.map(order => [
+      format(new Date(order.order_date), 'dd/MM/yyyy'),
+      order.child_name,
+      order.child_class,
+      order.total_amount,
+      order.status
     ]);
 
-    const csvContent = [
-      csvHeaders.join(','),
-      ...csvData.map(row => row.join(','))
-    ].join('\n');
-
+    const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     
@@ -107,216 +189,443 @@ const Reports = () => {
     });
   };
 
-  const getTotalSummary = () => {
-    return salesData.reduce(
-      (acc, curr) => ({
-        totalOrders: acc.totalOrders + curr.total_orders,
-        totalRevenue: acc.totalRevenue + curr.total_revenue,
-        completedOrders: acc.completedOrders + curr.completed_orders,
-        cancelledOrders: acc.cancelledOrders + curr.cancelled_orders,
-      }),
-      { totalOrders: 0, totalRevenue: 0, completedOrders: 0, cancelledOrders: 0 }
-    );
+  const printReport = () => {
+    if (!reportData || (reportData.orders.length === 0 && reportData.dailySales.length === 0)) {
+      toast({
+        title: "Error",
+        description: "Tidak ada data untuk dicetak",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Laporan ${reportType === 'daily' ? 'Harian' : reportType === 'weekly' ? 'Mingguan' : 'Bulanan'} - ${format(new Date(), 'dd MMMM yyyy', { locale: id })}</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            color: #333;
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #f97316;
+            padding-bottom: 20px;
+          }
+          .header h1 { 
+            color: #f97316; 
+            margin: 0 0 10px 0;
+            font-size: 24px;
+          }
+          .header p { 
+            margin: 5px 0; 
+            color: #666;
+          }
+          .summary { 
+            display: flex; 
+            justify-content: space-around; 
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+          }
+          .summary-item { 
+            text-align: center; 
+          }
+          .summary-item h3 { 
+            margin: 0 0 5px 0; 
+            font-size: 18px;
+            color: #f97316;
+          }
+          .summary-item p { 
+            margin: 0; 
+            color: #666;
+            font-size: 14px;
+          }
+          .section { 
+            margin-bottom: 40px; 
+          }
+          .section h2 { 
+            color: #f97316; 
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+          }
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 20px;
+          }
+          th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px 8px; 
+            text-align: left;
+          }
+          th { 
+            background-color: #f97316; 
+            color: white;
+            font-weight: bold;
+          }
+          tr:nth-child(even) { 
+            background-color: #f8f9fa; 
+          }
+          .text-center { 
+            text-align: center; 
+          }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Laporan ${reportType === 'daily' ? 'Harian' : reportType === 'weekly' ? 'Mingguan' : 'Bulanan'}</h1>
+          <p>Periode: ${startDate === endDate ? format(new Date(startDate), 'dd MMMM yyyy', { locale: id }) : `${format(new Date(startDate), 'dd MMMM yyyy', { locale: id })} - ${format(new Date(endDate), 'dd MMMM yyyy', { locale: id })}`}</p>
+          <p>Dicetak pada: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}</p>
+        </div>
+
+        <div class="summary">
+          <div class="summary-item">
+            <h3>${reportData?.totalOrders || 0}</h3>
+            <p>Total Pesanan</p>
+          </div>
+          <div class="summary-item">
+            <h3>${reportData ? formatPrice(reportData.totalRevenue) : 'Rp 0'}</h3>
+            <p>Total Pendapatan</p>
+          </div>
+          <div class="summary-item">
+            <h3>${reportData?.totalItems || 0}</h3>
+            <p>Total Item</p>
+          </div>
+          <div class="summary-item">
+            <h3>${reportData ? formatPrice(reportData.averageOrderValue) : 'Rp 0'}</h3>
+            <p>Rata-rata Nilai Pesanan</p>
+          </div>
+        </div>
+
+        ${reportData && reportData.orders.length > 0 ? `
+          <div class="section">
+            <h2>Detail Pesanan</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Tanggal</th>
+                  <th>Nama Anak</th>
+                  <th>Kelas</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reportData.orders.map((order, index) => `
+                  <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>${format(new Date(order.order_date), 'dd/MM/yyyy', { locale: id })}</td>
+                    <td>${order.child_name}</td>
+                    <td>${order.child_class}</td>
+                    <td>${formatPrice(order.total_amount)}</td>
+                    <td>${getStatusLabel(order.status)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+
+        ${reportData && reportData.popularItems.length > 0 ? `
+          <div class="section">
+            <h2>Menu Terpopuler</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Menu</th>
+                  <th class="text-center">Jumlah Terjual</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reportData.popularItems.map((item, index) => `
+                  <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>${item.name}</td>
+                    <td class="text-center"><strong>${item.total_sold}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
   };
 
-  const summary = getTotalSummary();
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'preparing':
+        return 'Preparing';
+      case 'delivered':
+        return 'Delivered';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const dailySalesData = reportData?.dailySales.map(item => ({
+    date: format(new Date(item.sales_date), 'dd/MM/yyyy'),
+    sales: item.total_sales,
+  }));
+
+  const popularItemsData = reportData?.popularItems.map(item => ({
+    name: item.name,
+    value: item.total_sold,
+  }));
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:justify-between md:items-center">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-            Laporan Penjualan
+          <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-1">
+            Laporan & Analisis
           </h1>
-          <p className="text-gray-600">Analisis dan laporan data penjualan</p>
+          <p className="text-gray-600 text-sm">Analisis data penjualan dan performa bisnis</p>
         </div>
         
-        <div className="flex space-x-4">
-          <Button onClick={exportToCSV} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
+        <div className="flex flex-col md:flex-row gap-2">
+          <Button onClick={printReport} variant="outline" size="sm" className="text-xs">
+            <Printer className="h-3 w-3 mr-1" />
+            Print
+          </Button>
+          <Button onClick={exportToCSV} variant="outline" size="sm" className="text-xs">
+            <Download className="h-3 w-3 mr-1" />
             Export CSV
           </Button>
         </div>
       </div>
 
       {/* Filter Section */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filter Laporan</CardTitle>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg">Filter Laporan</CardTitle>
+          <CardDescription className="text-xs md:text-sm">Pilih tipe laporan dan rentang tanggal</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <Label htmlFor="report-type">Jenis Laporan</Label>
+              <Label htmlFor="report-type" className="text-xs md:text-sm">Tipe Laporan</Label>
               <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="text-xs md:text-sm h-8 md:h-10">
+                  <SelectValue placeholder="Pilih tipe" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Harian</SelectItem>
-                  <SelectItem value="weekly">Mingguan</SelectItem>
-                  <SelectItem value="monthly">Bulanan</SelectItem>
+                  <SelectItem value="daily" className="text-xs md:text-sm">Harian</SelectItem>
+                  <SelectItem value="weekly" className="text-xs md:text-sm">Mingguan</SelectItem>
+                  <SelectItem value="monthly" className="text-xs md:text-sm">Bulanan</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             <div>
-              <Label htmlFor="start-date">Tanggal Mulai</Label>
+              <Label htmlFor="start-date" className="text-xs md:text-sm">Tanggal Mulai</Label>
               <Input
                 id="start-date"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                className="text-xs md:text-sm h-8 md:h-10"
               />
             </div>
             
             <div>
-              <Label htmlFor="end-date">Tanggal Akhir</Label>
+              <Label htmlFor="end-date" className="text-xs md:text-sm">Tanggal Akhir</Label>
               <Input
                 id="end-date"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                className="text-xs md:text-sm h-8 md:h-10"
               />
             </div>
             
             <div className="flex items-end">
-              <Button onClick={fetchSalesData} className="w-full">
-                Terapkan Filter
+              <Button onClick={handleFilter} className="w-full text-xs md:text-sm h-8 md:h-10">
+                <Calendar className="h-3 w-3 mr-1" />
+                Filter
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pesanan</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              Semua pesanan dalam periode
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(summary.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">
-              Pendapatan kotor
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pesanan Selesai</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.completedOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {summary.totalOrders > 0 ? Math.round((summary.completedOrders / summary.totalOrders) * 100) : 0}% dari total
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pesanan Dibatalkan</CardTitle>
-            <Users className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.cancelledOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {summary.totalOrders > 0 ? Math.round((summary.cancelledOrders / summary.totalOrders) * 100) : 0}% dari total
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {loading && (
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        </div>
+      )}
 
-      {/* Sales Data Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Detail Penjualan Harian</CardTitle>
-          <CardDescription>Data penjualan per hari dalam periode yang dipilih</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {salesData.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Tanggal</th>
-                    <th className="text-left p-2">Total Pesanan</th>
-                    <th className="text-left p-2">Pendapatan</th>
-                    <th className="text-left p-2">Rata-rata Nilai</th>
-                    <th className="text-left p-2">Selesai</th>
-                    <th className="text-left p-2">Dibatalkan</th>
-                    <th className="text-left p-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {salesData.map((row) => (
-                    <tr key={row.order_date} className="border-b hover:bg-gray-50">
-                      <td className="p-2">
-                        {format(new Date(row.order_date), 'dd MMM yyyy', { locale: id })}
-                      </td>
-                      <td className="p-2 font-medium">{row.total_orders}</td>
-                      <td className="p-2 text-green-600 font-medium">
-                        {formatPrice(row.total_revenue)}
-                      </td>
-                      <td className="p-2">{formatPrice(row.avg_order_value)}</td>
-                      <td className="p-2">
-                        <Badge variant="default">{row.completed_orders}</Badge>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant="destructive">{row.cancelled_orders}</Badge>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant={row.completed_orders > row.cancelled_orders ? 'default' : 'secondary'}>
-                          {row.completed_orders > row.cancelled_orders ? 'Baik' : 'Perlu Perhatian'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Tidak Ada Data</h3>
-              <p className="text-gray-600">Belum ada data penjualan untuk periode yang dipilih</p>
-            </div>
+      {reportData && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">Total Pesanan</CardTitle>
+                <ShoppingBag className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg md:text-2xl font-bold">{reportData.totalOrders}</div>
+                <p className="text-xs text-muted-foreground">Pesanan</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">Pendapatan</CardTitle>
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm md:text-2xl font-bold">{formatPrice(reportData.totalRevenue)}</div>
+                <p className="text-xs text-muted-foreground">Total</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">Total Item</CardTitle>
+                <FileText className="h-3 w-3 md:h-4 md:w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg md:text-2xl font-bold">{reportData.totalItems}</div>
+                <p className="text-xs text-muted-foreground">Item terjual</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">Rata-rata Nilai</CardTitle>
+                <Users className="h-3 w-3 md:h-4 md:w-4 text-violet-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm md:text-2xl font-bold">{formatPrice(reportData.averageOrderValue)}</div>
+                <p className="text-xs text-muted-foreground">Per pesanan</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Daily Sales Chart */}
+          {reportData.dailySales.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base md:text-xl">Grafik Penjualan Harian</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Total penjualan setiap hari</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={dailySalesData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis tickFormatter={(value) => formatPrice(value as number)} />
+                    <Tooltip formatter={(value) => formatPrice(value as number)} />
+                    <Legend />
+                    <Bar dataKey="sales" fill="#f97316" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Popular Items Chart */}
+          {reportData.popularItems.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base md:text-xl">Menu Terpopuler</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Item yang paling banyak dipesan</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={popularItemsData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      label
+                    >
+                      {popularItemsData?.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => value + ' items'} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Order Details Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base md:text-xl">Detail Pesanan</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Informasi lengkap setiap pesanan</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs md:text-sm">Tanggal</TableHead>
+                      <TableHead className="text-xs md:text-sm">Nama Anak</TableHead>
+                      <TableHead className="text-xs md:text-sm">Kelas</TableHead>
+                      <TableHead className="text-xs md:text-sm text-right">Total</TableHead>
+                      <TableHead className="text-xs md:text-sm">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.orders.map(order => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium text-xs md:text-sm">{format(new Date(order.order_date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell className="text-xs md:text-sm">{order.child_name}</TableCell>
+                        <TableCell className="text-xs md:text-sm">Kelas {order.child_class}</TableCell>
+                        <TableCell className="text-xs md:text-sm text-right">{formatPrice(order.total_amount)}</TableCell>
+                        <TableCell className="text-xs md:text-sm">{getStatusLabel(order.status)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 };

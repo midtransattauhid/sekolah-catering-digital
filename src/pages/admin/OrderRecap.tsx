@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Download, FileText, Calendar, Users } from 'lucide-react';
+import { Download, FileText, Calendar, Users, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -162,6 +161,189 @@ const OrderRecap = () => {
     fetchRecapData();
   };
 
+  const printReport = () => {
+    if (recapData.menuSummary.length === 0 && recapData.classMenuSummary.length === 0) {
+      toast({
+        title: "Error",
+        description: "Tidak ada data untuk dicetak",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Rekapitulasi Pesanan - ${format(new Date(), 'dd MMMM yyyy', { locale: id })}</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            color: #333;
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #f97316;
+            padding-bottom: 20px;
+          }
+          .header h1 { 
+            color: #f97316; 
+            margin: 0 0 10px 0;
+            font-size: 24px;
+          }
+          .header p { 
+            margin: 5px 0; 
+            color: #666;
+          }
+          .summary { 
+            display: flex; 
+            justify-content: space-around; 
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+          }
+          .summary-item { 
+            text-align: center; 
+          }
+          .summary-item h3 { 
+            margin: 0 0 5px 0; 
+            font-size: 18px;
+            color: #f97316;
+          }
+          .summary-item p { 
+            margin: 0; 
+            color: #666;
+            font-size: 14px;
+          }
+          .section { 
+            margin-bottom: 40px; 
+          }
+          .section h2 { 
+            color: #f97316; 
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+          }
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 20px;
+          }
+          th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px 8px; 
+            text-align: left;
+          }
+          th { 
+            background-color: #f97316; 
+            color: white;
+            font-weight: bold;
+          }
+          tr:nth-child(even) { 
+            background-color: #f8f9fa; 
+          }
+          .text-center { 
+            text-align: center; 
+          }
+          .badge { 
+            background: #f97316; 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 12px;
+          }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Rekapitulasi Pesanan</h1>
+          <p>Periode: ${startDate === endDate ? format(new Date(startDate), 'dd MMMM yyyy', { locale: id }) : `${format(new Date(startDate), 'dd MMMM yyyy', { locale: id })} - ${format(new Date(endDate), 'dd MMMM yyyy', { locale: id })}`}</p>
+          <p>Dicetak pada: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}</p>
+        </div>
+
+        <div class="summary">
+          <div class="summary-item">
+            <h3>${recapData.totalItems}</h3>
+            <p>Total Item Terjual</p>
+          </div>
+          <div class="summary-item">
+            <h3>${formatPrice(recapData.totalRevenue)}</h3>
+            <p>Total Pendapatan</p>
+          </div>
+          <div class="summary-item">
+            <h3>${recapData.uniqueChildren}</h3>
+            <p>Anak yang Memesan</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Rekapitulasi Menu (Gabungan)</h2>
+          ${recapData.menuSummary.length > 0 ? `
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Menu</th>
+                  <th class="text-center">Total Jumlah</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recapData.menuSummary.map((item, index) => `
+                  <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>${item.food_name}</td>
+                    <td class="text-center"><strong>${item.total_quantity}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p>Tidak ada data untuk periode yang dipilih</p>'}
+        </div>
+
+        <div class="section">
+          <h2>Rekapitulasi Menu Per Kelas</h2>
+          ${recapData.classMenuSummary.length > 0 ? `
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Kelas</th>
+                  <th>Nama Menu</th>
+                  <th class="text-center">Jumlah</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recapData.classMenuSummary.map((item, index) => `
+                  <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td><span class="badge">Kelas ${item.child_class}</span></td>
+                    <td>${item.food_name}</td>
+                    <td class="text-center"><strong>${item.total_quantity}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p>Tidak ada data untuk periode yang dipilih</p>'}
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   const exportToCSV = () => {
     if (recapData.menuSummary.length === 0 && recapData.classMenuSummary.length === 0) {
       toast({
@@ -250,10 +432,16 @@ const OrderRecap = () => {
           <p className="text-gray-600 text-sm">Laporan gabungan menu dan per kelas</p>
         </div>
         
-        <Button onClick={exportToCSV} variant="outline" size="sm" className="text-xs w-full md:w-auto">
-          <Download className="h-3 w-3 mr-1" />
-          Export CSV
-        </Button>
+        <div className="flex flex-col md:flex-row gap-2">
+          <Button onClick={printReport} variant="outline" size="sm" className="text-xs">
+            <Printer className="h-3 w-3 mr-1" />
+            Print
+          </Button>
+          <Button onClick={exportToCSV} variant="outline" size="sm" className="text-xs">
+            <Download className="h-3 w-3 mr-1" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Filter Section */}

@@ -67,7 +67,7 @@ const AdminNavbar = () => {
   };
 
   return (
-    <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg">
+    <div className="sticky top-0 z-50 bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg">
       <div className="container mx-auto px-2 md:px-4">
         <div className="flex items-center justify-between h-14 md:h-16">
           {/* Logo */}
