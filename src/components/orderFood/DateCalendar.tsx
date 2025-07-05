@@ -26,8 +26,8 @@ const DateCalendar = ({ selectedDate, onDateSelect, orderSchedules, isDateDisabl
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <CalendarIcon className="h-5 w-5 mr-2 text-orange-600" />
+        <CardTitle className="flex items-center text-lg md:text-xl">
+          <CalendarIcon className="h-4 w-4 md:h-5 md:w-5 mr-2 text-orange-600" />
           Pilih Tanggal
         </CardTitle>
       </CardHeader>
@@ -38,25 +38,25 @@ const DateCalendar = ({ selectedDate, onDateSelect, orderSchedules, isDateDisabl
           onSelect={onDateSelect}
           disabled={isDateDisabled}
           locale={idLocale}
-          className="rounded-md border"
+          className="rounded-md border w-full"
         />
         
         {/* Legend */}
         <div className="mt-4 space-y-2">
-          <div className="flex items-center text-sm">
-            <div className="w-3 h-3 bg-gray-400 rounded mr-2"></div>
+          <div className="flex items-center text-xs md:text-sm">
+            <div className="w-3 h-3 bg-gray-400 rounded mr-2 flex-shrink-0"></div>
             <span>Sabtu & Minggu (Tutup)</span>
           </div>
-          <div className="flex items-center text-sm">
-            <div className="w-3 h-3 bg-red-200 rounded mr-2"></div>
+          <div className="flex items-center text-xs md:text-sm">
+            <div className="w-3 h-3 bg-red-200 rounded mr-2 flex-shrink-0"></div>
             <span>Tanggal diblokir/penuh</span>
           </div>
-          <div className="flex items-center text-sm">
-            <div className="w-3 h-3 bg-orange-200 rounded mr-2"></div>
+          <div className="flex items-center text-xs md:text-sm">
+            <div className="w-3 h-3 bg-orange-200 rounded mr-2 flex-shrink-0"></div>
             <span>Batas waktu terlewat</span>
           </div>
-          <div className="flex items-center text-sm">
-            <div className="w-3 h-3 bg-green-200 rounded mr-2"></div>
+          <div className="flex items-center text-xs md:text-sm">
+            <div className="w-3 h-3 bg-green-200 rounded mr-2 flex-shrink-0"></div>
             <span>Tersedia untuk dipesan</span>
           </div>
         </div>

@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Utensils, ShoppingBag, Calendar, FileText, LogOut, Menu, X, Plus } from "lucide-react";
+import { LayoutDashboard, Utensils, ShoppingBag, Calendar, FileText, LogOut, Menu, X, Plus, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -48,6 +48,11 @@ const AdminNavbar = () => {
       icon: Plus,
     },
     {
+      name: "Rekapitulasi",
+      href: "/admin/order-recap",
+      icon: BarChart3,
+    },
+    {
       name: "Laporan",
       href: "/admin/reports",
       icon: FileText,
@@ -63,50 +68,50 @@ const AdminNavbar = () => {
 
   return (
     <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+      <div className="container mx-auto px-2 md:px-4">
+        <div className="flex items-center justify-between h-14 md:h-16">
           {/* Logo */}
-          <Link to="/admin" className="text-2xl font-bold">
+          <Link to="/admin" className="text-lg md:text-2xl font-bold truncate">
             CateringKu Admin
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden lg:flex items-center space-x-1">
             {navigationItems.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  "flex items-center px-2 py-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap",
                   isActiveRoute(item.href)
                     ? "bg-white/20 text-white"
                     : "text-white/80 hover:bg-white/10 hover:text-white"
                 )}
               >
-                <item.icon className="h-4 w-4 mr-2" />
+                <item.icon className="h-3 w-3 mr-1" />
                 {item.name}
               </Link>
             ))}
           </nav>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-white hover:bg-white/10"
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </Button>
-          </div>
+          <div className="flex items-center space-x-2">
+            {/* Mobile Menu Button */}
+            <div className="lg:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-white hover:bg-white/10 p-2"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
 
-          {/* User Menu */}
-          <div className="hidden md:block">
+            {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -139,7 +144,7 @@ const AdminNavbar = () => {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-white/20">
+          <div className="lg:hidden py-4 border-t border-white/20">
             <nav className="space-y-2">
               {navigationItems.map((item) => (
                 <Link

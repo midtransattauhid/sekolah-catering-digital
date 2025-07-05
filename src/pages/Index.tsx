@@ -228,17 +228,17 @@ const Index = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+    <div className="max-w-6xl mx-auto p-4 md:p-6">
+      <div className="text-center mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
           Menu & Pemesanan Katering
         </h1>
-        <p className="text-gray-600">Pilih tanggal dan anak untuk melihat menu yang tersedia</p>
+        <p className="text-gray-600 text-sm md:text-base">Pilih tanggal dan anak untuk melihat menu yang tersedia</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
         {/* Left Panel - Child Selection & Calendar */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <ChildSelector
             children={children}
             selectedChild={selectedChild}
@@ -277,9 +277,9 @@ const Index = () => {
             />
           ) : (
             <Card>
-              <CardContent className="text-center py-12">
-                <CalendarIcon className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">Pilih anak dan tanggal untuk melihat menu</p>
+              <CardContent className="text-center py-8 md:py-12">
+                <CalendarIcon className="h-12 w-12 md:h-16 md:w-16 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500 text-sm md:text-base">Pilih anak dan tanggal untuk melihat menu</p>
               </CardContent>
             </Card>
           )}

@@ -211,10 +211,10 @@ const OrderRecap = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-32 bg-gray-200 rounded"></div>
             ))}
@@ -226,53 +226,55 @@ const OrderRecap = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 md:mb-8 space-y-4 md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
             Rekapitulasi Pesanan
           </h1>
-          <p className="text-gray-600">Laporan detail pesanan per kelas dan anak</p>
+          <p className="text-gray-600 text-sm md:text-base">Laporan detail pesanan per kelas dan anak</p>
         </div>
         
-        <div className="flex space-x-4">
-          <Button onClick={exportToCSV} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
+        <div className="flex space-x-2 md:space-x-4">
+          <Button onClick={exportToCSV} variant="outline" size="sm" className="text-xs md:text-sm">
+            <Download className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
             Export CSV
           </Button>
         </div>
       </div>
 
       {/* Filter Section */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filter Tanggal</CardTitle>
+      <Card className="mb-4 md:mb-6">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg md:text-xl">Filter Tanggal</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="start-date">Tanggal Mulai</Label>
+              <Label htmlFor="start-date" className="text-sm">Tanggal Mulai</Label>
               <Input
                 id="start-date"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                className="text-sm"
               />
             </div>
             
             <div>
-              <Label htmlFor="end-date">Tanggal Akhir</Label>
+              <Label htmlFor="end-date" className="text-sm">Tanggal Akhir</Label>
               <Input
                 id="end-date"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                className="text-sm"
               />
             </div>
             
             <div className="flex items-end">
-              <Button onClick={handleFilter} className="w-full">
-                <Calendar className="h-4 w-4 mr-2" />
+              <Button onClick={handleFilter} className="w-full text-sm">
+                <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                 Filter
               </Button>
             </div>
@@ -281,14 +283,14 @@ const OrderRecap = () => {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Item</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-xs md:text-sm font-medium">Total Item</CardTitle>
+            <FileText className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.totalItems}</div>
+            <div className="text-lg md:text-2xl font-bold">{summary.totalItems}</div>
             <p className="text-xs text-muted-foreground">
               Item yang dipesan
             </p>
@@ -297,11 +299,11 @@ const OrderRecap = () => {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
-            <FileText className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-xs md:text-sm font-medium">Total Pendapatan</CardTitle>
+            <FileText className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(summary.totalRevenue)}</div>
+            <div className="text-lg md:text-2xl font-bold">{formatPrice(summary.totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               Pendapatan kotor
             </p>
@@ -310,11 +312,11 @@ const OrderRecap = () => {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Jumlah Anak</CardTitle>
-            <Users className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-xs md:text-sm font-medium">Jumlah Anak</CardTitle>
+            <Users className="h-3 w-3 md:h-4 md:w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.uniqueChildren}</div>
+            <div className="text-lg md:text-2xl font-bold">{summary.uniqueChildren}</div>
             <p className="text-xs text-muted-foreground">
               Anak yang memesan
             </p>
@@ -323,11 +325,11 @@ const OrderRecap = () => {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kelas Terbanyak</CardTitle>
-            <Users className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-xs md:text-sm font-medium">Kelas Terbanyak</CardTitle>
+            <Users className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-sm md:text-2xl font-bold">
               {Object.keys(summary.byClass).length > 0 
                 ? Object.entries(summary.byClass).sort(([,a], [,b]) => b - a)[0][0]
                 : '-'
@@ -344,17 +346,17 @@ const OrderRecap = () => {
       </div>
 
       {/* Recap by Class */}
-      <Card className="mb-6">
+      <Card className="mb-4 md:mb-6">
         <CardHeader>
-          <CardTitle>Rekapitulasi per Kelas</CardTitle>
-          <CardDescription>Total pesanan berdasarkan kelas</CardDescription>
+          <CardTitle className="text-lg md:text-xl">Rekapitulasi per Kelas</CardTitle>
+          <CardDescription className="text-sm">Total pesanan berdasarkan kelas</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
             {Object.entries(summary.byClass).map(([className, count]) => (
-              <div key={className} className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">{count}</div>
-                <div className="text-sm text-gray-600">Kelas {className}</div>
+              <div key={className} className="text-center p-3 md:p-4 bg-gray-50 rounded-lg">
+                <div className="text-xl md:text-2xl font-bold text-orange-600">{count}</div>
+                <div className="text-xs md:text-sm text-gray-600">Kelas {className}</div>
               </div>
             ))}
           </div>
@@ -364,8 +366,8 @@ const OrderRecap = () => {
       {/* Detailed Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Detail Pesanan</CardTitle>
-          <CardDescription>Daftar lengkap pesanan per anak</CardDescription>
+          <CardTitle className="text-lg md:text-xl">Detail Pesanan</CardTitle>
+          <CardDescription className="text-sm">Daftar lengkap pesanan per anak</CardDescription>
         </CardHeader>
         <CardContent>
           {recapData.length > 0 ? (
@@ -373,30 +375,30 @@ const OrderRecap = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Nama Anak</TableHead>
-                    <TableHead>Kelas</TableHead>
-                    <TableHead>Nama Makanan</TableHead>
-                    <TableHead>Jumlah</TableHead>
-                    <TableHead>Harga Satuan</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="text-xs md:text-sm">Tanggal</TableHead>
+                    <TableHead className="text-xs md:text-sm">Nama Anak</TableHead>
+                    <TableHead className="text-xs md:text-sm">Kelas</TableHead>
+                    <TableHead className="text-xs md:text-sm">Nama Makanan</TableHead>
+                    <TableHead className="text-xs md:text-sm">Jumlah</TableHead>
+                    <TableHead className="text-xs md:text-sm">Harga Satuan</TableHead>
+                    <TableHead className="text-xs md:text-sm">Total</TableHead>
+                    <TableHead className="text-xs md:text-sm">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recapData.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell>{formatDateForDisplay(item.order_date)}</TableCell>
-                      <TableCell className="font-medium">{item.child_name}</TableCell>
+                      <TableCell className="text-xs md:text-sm">{formatDateForDisplay(item.order_date)}</TableCell>
+                      <TableCell className="font-medium text-xs md:text-sm">{item.child_name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">Kelas {item.child_class}</Badge>
+                        <Badge variant="outline" className="text-xs">Kelas {item.child_class}</Badge>
                       </TableCell>
-                      <TableCell>{item.food_name}</TableCell>
-                      <TableCell className="text-center">{item.quantity}</TableCell>
-                      <TableCell>{formatPrice(item.price)}</TableCell>
-                      <TableCell className="font-medium">{formatPrice(item.total_amount)}</TableCell>
+                      <TableCell className="text-xs md:text-sm">{item.food_name}</TableCell>
+                      <TableCell className="text-center text-xs md:text-sm">{item.quantity}</TableCell>
+                      <TableCell className="text-xs md:text-sm">{formatPrice(item.price)}</TableCell>
+                      <TableCell className="font-medium text-xs md:text-sm">{formatPrice(item.total_amount)}</TableCell>
                       <TableCell>
-                        <Badge variant={item.status === 'delivered' ? 'default' : 'secondary'}>
+                        <Badge variant={item.status === 'delivered' ? 'default' : 'secondary'} className="text-xs">
                           {item.status}
                         </Badge>
                       </TableCell>
@@ -407,9 +409,9 @@ const OrderRecap = () => {
             </div>
           ) : (
             <div className="text-center py-8">
-              <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Tidak Ada Data</h3>
-              <p className="text-gray-600">Belum ada pesanan untuk periode yang dipilih</p>
+              <FileText className="h-12 w-12 md:h-16 md:w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-base md:text-lg font-medium mb-2">Tidak Ada Data</h3>
+              <p className="text-gray-600 text-sm md:text-base">Belum ada pesanan untuk periode yang dipilih</p>
             </div>
           )}
         </CardContent>

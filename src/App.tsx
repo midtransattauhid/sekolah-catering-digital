@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +21,7 @@ import OrderManagement from "./pages/admin/OrderManagement";
 import ScheduleManagement from "./pages/admin/ScheduleManagement";
 import Reports from "./pages/admin/Reports";
 import PopulateDailyMenus from "./pages/admin/PopulateDailyMenus";
+import OrderRecap from "./pages/admin/OrderRecap";
 
 const queryClient = new QueryClient();
 
@@ -142,6 +142,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute adminOnly={true}>
               <ScheduleManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/order-recap" 
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <OrderRecap />
             </ProtectedRoute>
           } 
         />
