@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -17,7 +16,7 @@ export const useUserManagement = () => {
     try {
       console.log('Fetching users and roles...');
       
-      // Fetch from profiles table first
+      // Fetch profiles first - this is our primary source of user data
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, created_at, role');
@@ -29,7 +28,7 @@ export const useUserManagement = () => {
       
       console.log('Profiles data:', profilesData);
       
-      // Fetch user roles
+      // Fetch user roles for role management
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -42,79 +41,86 @@ export const useUserManagement = () => {
       
       console.log('Roles data:', rolesData);
       
-      // Try to fetch from auth.users for email (this might fail if not admin)
+      // Try to get auth users for email data (admin access required)
       let authUsers: any[] = [];
       try {
         const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
         if (!authError && users) {
           authUsers = users;
-          console.log('Auth users:', authUsers);
+          console.log('Auth users found:', authUsers.length);
         }
       } catch (error) {
-        console.log('Could not fetch auth users (might not have admin access):', error);
+        console.log('Could not fetch auth users (insufficient permissions):', error);
       }
       
-      // Combine all user data
+      // Create combined user data prioritizing profiles table
       const combinedUsers: ProfileUser[] = [];
       const processedRoles: UserRole[] = [];
-      const seenUsers = new Set<string>();
       
       // Process roles to get latest role per user
-      if (rolesData && Array.isArray(rolesData) && rolesData.length > 0) {
+      if (rolesData && Array.isArray(rolesData)) {
+        const roleMap = new Map<string, string>();
         rolesData.forEach(role => {
-          if (role && role.user_id && !seenUsers.has(role.user_id)) {
-            seenUsers.add(role.user_id);
-            processedRoles.push(role);
+          if (role && role.user_id && role.role) {
+            // Keep the first (most recent) role for each user
+            if (!roleMap.has(role.user_id)) {
+              roleMap.set(role.user_id, role.role);
+              processedRoles.push(role);
+            }
           }
         });
       }
       
-      // Get all unique user IDs
-      const allUserIds = new Set<string>();
-      
-      // Add users from profiles
-      if (profilesData && Array.isArray(profilesData) && profilesData.length > 0) {
+      // Process profiles to create user list
+      if (profilesData && Array.isArray(profilesData)) {
         profilesData.forEach(profile => {
           if (profile && profile.id) {
-            allUserIds.add(profile.id);
+            const authUser = authUsers.find(u => u && u.id === profile.id);
+            const userRole = processedRoles.find(r => r && r.user_id === profile.id);
+            
+            // Generate fallback name if needed
+            let displayName = profile.full_name;
+            if (!displayName || displayName.trim() === '') {
+              if (authUser?.email) {
+                displayName = authUser.email.split('@')[0];
+              } else if (authUser?.user_metadata?.full_name) {
+                displayName = authUser.user_metadata.full_name;
+              } else {
+                displayName = `User ${profile.id.slice(0, 8)}`;
+              }
+            }
+            
+            combinedUsers.push({
+              id: profile.id,
+              full_name: displayName,
+              email: authUser?.email || null,
+              created_at: profile.created_at || new Date().toISOString(),
+              role: userRole?.role || profile.role || 'parent'
+            });
           }
         });
       }
       
-      // Add users from roles
-      if (processedRoles.length > 0) {
-        processedRoles.forEach(role => {
-          if (role && role.user_id) {
-            allUserIds.add(role.user_id);
+      // If no profiles exist but we have auth users, create entries for them
+      if (combinedUsers.length === 0 && authUsers.length > 0) {
+        authUsers.forEach(authUser => {
+          if (authUser && authUser.id) {
+            const userRole = processedRoles.find(r => r && r.user_id === authUser.id);
+            
+            combinedUsers.push({
+              id: authUser.id,
+              full_name: authUser.user_metadata?.full_name || 
+                        authUser.email?.split('@')[0] || 
+                        `User ${authUser.id.slice(0, 8)}`,
+              email: authUser.email || null,
+              created_at: authUser.created_at || new Date().toISOString(),
+              role: userRole?.role || 'parent'
+            });
           }
         });
       }
       
-      // Add users from auth
-      if (authUsers.length > 0) {
-        authUsers.forEach(user => {
-          if (user && user.id) {
-            allUserIds.add(user.id);
-          }
-        });
-      }
-      
-      // Create combined user objects
-      Array.from(allUserIds).forEach(userId => {
-        const authUser = authUsers.find(u => u && u.id === userId);
-        const profile = profilesData?.find(p => p && p.id === userId);
-        const userRole = processedRoles.find(r => r && r.user_id === userId);
-        
-        combinedUsers.push({
-          id: userId,
-          full_name: profile?.full_name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || null,
-          email: authUser?.email || null,
-          created_at: profile?.created_at || authUser?.created_at || new Date().toISOString(),
-          role: userRole?.role || profile?.role || 'parent'
-        });
-      });
-      
-      console.log('Combined users:', combinedUsers);
+      console.log('Final combined users:', combinedUsers);
       
       setProfileUsers(combinedUsers);
       setUserRoles(processedRoles);
@@ -134,7 +140,7 @@ export const useUserManagement = () => {
     try {
       console.log('Updating role for user:', userId, 'to:', newRole);
       
-      // Update or insert user role (upsert will handle duplicates)
+      // Update user_roles table with upsert
       const { error: roleError } = await supabase
         .from('user_roles')
         .upsert({ 
@@ -149,7 +155,7 @@ export const useUserManagement = () => {
         throw roleError;
       }
 
-      // Update profiles table as well
+      // Also update profiles table role
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ role: newRole })
