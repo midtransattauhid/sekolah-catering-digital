@@ -7,9 +7,9 @@ export interface UserRole {
 export interface ProfileUser {
   id: string;
   full_name: string | null;
+  email: string | null;
   created_at: string;
   role: string | null;
-  email?: string | null;
 }
 
 export interface ProfileData {
@@ -22,4 +22,8 @@ export interface ProfileData {
 export interface AuthUser {
   id: string;
   email?: string;
+  user_metadata?: {
+    full_name?: string;
+  };
+  created_at?: string;
 }

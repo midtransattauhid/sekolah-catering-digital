@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, UserCheck, Users } from 'lucide-react';
+import { Shield, UserCheck, Users, Mail, User } from 'lucide-react';
 import { ProfileUser } from '@/types/userManagement';
 
 interface UserRoleRowProps {
@@ -34,10 +34,9 @@ export const UserRoleRow = ({ user, currentRole, onRoleChange }: UserRoleRowProp
     }
   };
 
-  const displayName = user.full_name || `User ${user.id.slice(0, 8)}`;
-  const displaySubtext = user.full_name 
-    ? `ID: ${user.id.slice(0, 8)}...` 
-    : `ID: ${user.id}`;
+  const displayName = user.full_name || 'Nama tidak tersedia';
+  const displayEmail = user.email || 'Email tidak tersedia';
+  const displayId = user.id.slice(0, 8) + '...';
 
   return (
     <div className="flex items-center justify-between p-4 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
@@ -45,14 +44,26 @@ export const UserRoleRow = ({ user, currentRole, onRoleChange }: UserRoleRowProp
         <div className="p-2 bg-gray-100 rounded-full">
           {getRoleIcon()}
         </div>
-        <div className="flex-1">
-          <p className="font-medium text-gray-900">
-            {displayName}
-          </p>
-          <p className="text-sm text-gray-500">
-            {displaySubtext}
-          </p>
-          <div className="flex items-center mt-1">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2 mb-1">
+            <User className="h-4 w-4 text-gray-400" />
+            <p className="font-medium text-gray-900 truncate">
+              {displayName}
+            </p>
+          </div>
+          <div className="flex items-center space-x-2 mb-1">
+            <Mail className="h-4 w-4 text-gray-400" />
+            <p className="text-sm text-gray-600 truncate">
+              {displayEmail}
+            </p>
+          </div>
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-xs text-gray-400">ID:</span>
+            <span className="text-xs text-gray-500 font-mono">
+              {displayId}
+            </span>
+          </div>
+          <div className="flex items-center">
             <span className="text-xs text-gray-400 mr-2">Role saat ini:</span>
             <span className={`text-xs px-2 py-1 rounded-full ${
               currentRole === 'admin' ? 'bg-red-100 text-red-800' :
@@ -64,7 +75,7 @@ export const UserRoleRow = ({ user, currentRole, onRoleChange }: UserRoleRowProp
           </div>
         </div>
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 ml-4">
         <Select
           value={currentRole}
           onValueChange={(newRole) => onRoleChange(user.id, newRole)}
