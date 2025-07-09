@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -29,10 +28,11 @@ export const useUserManagement = () => {
       
       console.log('Profiles data:', profilesData);
       
-      // Fetch user roles
+      // Fetch user roles (get only the latest role per user)
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
-        .select('user_id, role');
+        .select('user_id, role')
+        .order('created_at', { ascending: false });
 
       if (rolesError) {
         console.error('Error fetching roles:', rolesError);
@@ -41,38 +41,55 @@ export const useUserManagement = () => {
       
       console.log('Roles data:', rolesData);
       
-      // Convert profiles data to ProfileUser format
-      let combinedUsers: ProfileUser[] = [];
+      // Create a map to store unique users with their latest roles
+      const uniqueUsers = new Map<string, ProfileUser>();
       
+      // Process profiles first
       if (profilesData && Array.isArray(profilesData)) {
-        combinedUsers = (profilesData as ProfileData[]).map((profile: ProfileData) => ({
-          id: profile.id,
-          full_name: profile.full_name,
-          created_at: profile.created_at,
-          role: profile.role,
-          email: null // We can't access emails without admin API, so we'll show user ID instead
-        }));
+        (profilesData as ProfileData[]).forEach((profile: ProfileData) => {
+          uniqueUsers.set(profile.id, {
+            id: profile.id,
+            full_name: profile.full_name,
+            created_at: profile.created_at,
+            role: profile.role,
+            email: null
+          });
+        });
       }
       
-      // Add users that exist in user_roles but not in profiles
+      // Process roles and update user roles (only keep latest role per user)
+      const processedRoles: UserRole[] = [];
+      const seenUsers = new Set<string>();
+      
       if (rolesData && Array.isArray(rolesData)) {
-        const existingProfileIds = combinedUsers.map(user => user.id);
-        const missingUsers = rolesData
-          .filter(role => !existingProfileIds.includes(role.user_id))
-          .map(role => ({
-            id: role.user_id,
-            full_name: null,
-            created_at: new Date().toISOString(),
-            role: role.role,
-            email: null
-          }));
-        
-        combinedUsers = [...combinedUsers, ...missingUsers];
-        console.log('Combined users with missing profiles:', combinedUsers);
+        rolesData.forEach(role => {
+          if (!seenUsers.has(role.user_id)) {
+            seenUsers.add(role.user_id);
+            processedRoles.push(role);
+            
+            // Update user role in the map or add missing user
+            if (uniqueUsers.has(role.user_id)) {
+              const existingUser = uniqueUsers.get(role.user_id)!;
+              existingUser.role = role.role;
+            } else {
+              // Add user that exists in roles but not in profiles
+              uniqueUsers.set(role.user_id, {
+                id: role.user_id,
+                full_name: null,
+                created_at: new Date().toISOString(),
+                role: role.role,
+                email: null
+              });
+            }
+          }
+        });
       }
+      
+      const combinedUsers = Array.from(uniqueUsers.values());
+      console.log('Combined unique users:', combinedUsers);
       
       setProfileUsers(combinedUsers);
-      setUserRoles(rolesData || []);
+      setUserRoles(processedRoles);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -89,10 +106,15 @@ export const useUserManagement = () => {
     try {
       console.log('Updating role for user:', userId, 'to:', newRole);
       
-      // Update or insert user role
+      // Update or insert user role (upsert will handle duplicates)
       const { error: roleError } = await supabase
         .from('user_roles')
-        .upsert({ user_id: userId, role: newRole });
+        .upsert({ 
+          user_id: userId, 
+          role: newRole 
+        }, {
+          onConflict: 'user_id'
+        });
 
       if (roleError) {
         console.error('Error updating user_roles:', roleError);
