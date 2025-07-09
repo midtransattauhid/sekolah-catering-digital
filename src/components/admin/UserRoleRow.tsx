@@ -34,9 +34,9 @@ export const UserRoleRow = ({ user, currentRole, onRoleChange }: UserRoleRowProp
     }
   };
 
-  const displayName = user.full_name || 'User';
-  const displayEmail = user.email || 'No email';
-  const displayId = user.id ? user.id.slice(0, 8) + '...' : 'No ID';
+  const displayName = user.full_name || 'Nama tidak tersedia';
+  const displayEmail = user.email || 'Email tidak tersedia';
+  const displayId = user.id ? user.id.slice(0, 8) + '...' : 'ID tidak tersedia';
 
   return (
     <div className="flex items-center justify-between p-4 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
