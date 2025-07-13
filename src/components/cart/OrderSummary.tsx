@@ -13,6 +13,13 @@ interface OrderSummaryProps {
 const OrderSummary = ({ totalPrice, formatPrice, onCheckout, loading, canCheckout }: OrderSummaryProps) => {
   const isDisabled = loading || !canCheckout;
   
+  console.log('OrderSummary render:', { 
+    totalPrice, 
+    loading, 
+    canCheckout, 
+    isDisabled 
+  });
+  
   return (
     <div className="space-y-4">
       {/* Total */}
@@ -38,7 +45,7 @@ const OrderSummary = ({ totalPrice, formatPrice, onCheckout, loading, canCheckou
       {/* Status indicator */}
       {!canCheckout && !loading && (
         <p className="text-sm text-red-600 text-center">
-          Pilih anak terlebih dahulu untuk melanjutkan
+          {totalPrice === 0 ? 'Keranjang kosong' : 'Pilih anak terlebih dahulu untuk melanjutkan'}
         </p>
       )}
     </div>

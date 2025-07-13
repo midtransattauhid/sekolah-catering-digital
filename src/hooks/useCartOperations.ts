@@ -19,7 +19,19 @@ export const useCartOperations = () => {
     cartItems: CartItem[],
     onSuccess?: () => void
   ) => {
-    if (!selectedChildId) {
+    console.log('handleCheckout started:', { 
+      selectedChildId, 
+      cartItemsLength: cartItems.length,
+      isCheckingOut 
+    });
+
+    if (isCheckingOut) {
+      console.log('Already processing checkout, skipping');
+      return;
+    }
+
+    if (!selectedChildId || selectedChildId.trim() === '') {
+      console.log('No child selected');
       toast({
         title: "Error",
         description: "Silakan pilih anak terlebih dahulu",
@@ -29,6 +41,7 @@ export const useCartOperations = () => {
     }
 
     if (cartItems.length === 0) {
+      console.log('Cart is empty');
       toast({
         title: "Error",
         description: "Keranjang belanja kosong",
@@ -55,9 +68,12 @@ export const useCartOperations = () => {
       }
 
       // Create order
+      console.log('Creating order...');
       const orderData = await createOrder(cartItems, selectedChild, notes);
+      console.log('Order created:', orderData);
 
       // Process payment
+      console.log('Processing payment...');
       await processPayment(
         orderData.id,
         cartItems,

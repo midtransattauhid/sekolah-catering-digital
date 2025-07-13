@@ -23,9 +23,10 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     setSelectedChildId,
     notes,
     setNotes,
-    loading,
+    loading: childrenLoading,
     fetchChildren,
-    handleCheckout
+    handleCheckout,
+    isCheckingOut
   } = cartOperations;
 
   useEffect(() => {
@@ -55,22 +56,56 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
   };
 
   const handleCheckoutClick = async () => {
-    console.log('Checkout clicked:', { selectedChildId, childrenLength: children.length });
-    await handleCheckout(cartItems, () => {
-      onCheckout();
-      onClose();
-      setSelectedChildId('');
-      setNotes('');
+    console.log('Checkout clicked:', { 
+      selectedChildId, 
+      childrenLength: children.length, 
+      cartItemsLength: cartItems.length,
+      isCheckingOut
     });
+    
+    if (!selectedChildId || selectedChildId.trim() === '') {
+      console.log('No child selected');
+      return;
+    }
+    
+    if (cartItems.length === 0) {
+      console.log('Cart is empty');
+      return;
+    }
+
+    try {
+      await handleCheckout(cartItems, () => {
+        onCheckout();
+        onClose();
+        setSelectedChildId('');
+        setNotes('');
+      });
+    } catch (error) {
+      console.error('Checkout error in Cart component:', error);
+    }
   };
 
   if (cartItems.length === 0) {
     return null;
   }
 
-  const canCheckout = Boolean(selectedChildId && selectedChildId.trim() !== '' && children.length > 0);
+  const canCheckout = Boolean(
+    selectedChildId && 
+    selectedChildId.trim() !== '' && 
+    children.length > 0 && 
+    cartItems.length > 0 &&
+    !isCheckingOut &&
+    !childrenLoading
+  );
 
-  console.log('Cart state:', { selectedChildId, childrenLength: children.length, canCheckout, loading });
+  console.log('Cart render state:', { 
+    selectedChildId, 
+    childrenLength: children.length, 
+    canCheckout, 
+    isCheckingOut,
+    childrenLoading,
+    cartItemsLength: cartItems.length
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -102,7 +137,7 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
             totalPrice={getTotalPrice()}
             formatPrice={formatPrice}
             onCheckout={handleCheckoutClick}
-            loading={loading}
+            loading={isCheckingOut}
             canCheckout={canCheckout}
           />
         </div>
