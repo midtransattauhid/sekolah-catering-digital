@@ -82,11 +82,11 @@ const OrderDetail = () => {
       // Transform the data to match our interface
       const transformedOrder = {
         ...orderData,
-        order_line_items: orderData.order_line_items?.map((item: any) => ({
+        order_line_items: orderData.order_line_items.map((item: any) => ({
           ...item,
           order_id: orderData.id, // Add the missing order_id
           menu_items: item.menu_items || { name: 'Unknown Item', image_url: '' }
-        })) || [],
+        })),
         payments: paymentData || []
       };
 

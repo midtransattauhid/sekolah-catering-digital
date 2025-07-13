@@ -1,6 +1,9 @@
 
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ShoppingCart, X } from 'lucide-react';
 import { CartItem } from '@/types/cart';
 import { useCartOperations } from '@/hooks/useCartOperations';
 import CartItemList from '@/components/cart/CartItemList';
@@ -23,10 +26,9 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     setSelectedChildId,
     notes,
     setNotes,
-    loading: childrenLoading,
+    loading,
     fetchChildren,
-    handleCheckout,
-    isCheckingOut
+    handleCheckout
   } = cartOperations;
 
   useEffect(() => {
@@ -39,6 +41,7 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     if (newQuantity === 0) {
       onRemoveItem(itemId);
     } else {
+      // Handle quantity update - this would need to be passed as a prop or handled differently
       console.log('Update quantity not implemented in this interface');
     }
   };
@@ -56,56 +59,19 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
   };
 
   const handleCheckoutClick = async () => {
-    console.log('Checkout clicked:', { 
-      selectedChildId, 
-      childrenLength: children.length, 
-      cartItemsLength: cartItems.length,
-      isCheckingOut
+    await handleCheckout(cartItems, () => {
+      onCheckout();
+      onClose();
+      setSelectedChildId('');
+      setNotes('');
     });
-    
-    if (!selectedChildId || selectedChildId.trim() === '') {
-      console.log('No child selected');
-      return;
-    }
-    
-    if (cartItems.length === 0) {
-      console.log('Cart is empty');
-      return;
-    }
-
-    try {
-      await handleCheckout(cartItems, () => {
-        onCheckout();
-        onClose();
-        setSelectedChildId('');
-        setNotes('');
-      });
-    } catch (error) {
-      console.error('Checkout error in Cart component:', error);
-    }
   };
 
   if (cartItems.length === 0) {
     return null;
   }
 
-  const canCheckout = Boolean(
-    selectedChildId && 
-    selectedChildId.trim() !== '' && 
-    children.length > 0 && 
-    cartItems.length > 0 &&
-    !isCheckingOut &&
-    !childrenLoading
-  );
-
-  console.log('Cart render state:', { 
-    selectedChildId, 
-    childrenLength: children.length, 
-    canCheckout, 
-    isCheckingOut,
-    childrenLoading,
-    cartItemsLength: cartItems.length
-  });
+  const canCheckout = selectedChildId && children.length > 0;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -118,6 +84,7 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
         </SheetHeader>
 
         <div className="space-y-4 mt-6">
+          {/* Cart Items */}
           <CartItemList
             items={cartItems}
             onUpdateQuantity={updateQuantity}
@@ -125,6 +92,7 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
             formatPrice={formatPrice}
           />
 
+          {/* Checkout Form */}
           <CheckoutForm
             children={children}
             selectedChildId={selectedChildId}
@@ -133,11 +101,12 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
             onNotesChange={setNotes}
           />
 
+          {/* Order Summary */}
           <OrderSummary
             totalPrice={getTotalPrice()}
             formatPrice={formatPrice}
             onCheckout={handleCheckoutClick}
-            loading={isCheckingOut}
+            loading={loading}
             canCheckout={canCheckout}
           />
         </div>

@@ -14,6 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      batch_orders: {
+        Row: {
+          batch_id: string
+          created_at: string
+          id: string
+          order_id: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_payments: {
+        Row: {
+          amount: number
+          cashier_id: string
+          change_amount: number
+          created_at: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          received_amount: number
+        }
+        Insert: {
+          amount: number
+          cashier_id: string
+          change_amount?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          received_amount: number
+        }
+        Update: {
+          amount?: number
+          cashier_id?: string
+          change_amount?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          received_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -153,7 +223,7 @@ export type Database = {
           child_class: string | null
           child_id: string | null
           child_name: string
-          created_at: string
+          created_at: string | null
           delivery_date: string
           id: string
           menu_item_id: string
@@ -163,29 +233,29 @@ export type Database = {
           quantity: number
           total_price: number | null
           unit_price: number
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           child_class?: string | null
           child_id?: string | null
           child_name: string
-          created_at?: string
+          created_at?: string | null
           delivery_date: string
           id?: string
           menu_item_id: string
           notes?: string | null
-          order_date: string
+          order_date?: string
           order_id: string
           quantity?: number
           total_price?: number | null
           unit_price: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           child_class?: string | null
           child_id?: string | null
           child_name?: string
-          created_at?: string
+          created_at?: string | null
           delivery_date?: string
           id?: string
           menu_item_id?: string
@@ -195,9 +265,16 @@ export type Database = {
           quantity?: number
           total_price?: number | null
           unit_price?: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "order_line_items_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_line_items_menu_item_id_fkey"
             columns: ["menu_item_id"]
@@ -262,6 +339,7 @@ export type Database = {
           id: string
           midtrans_order_id: string | null
           notes: string | null
+          order_date: string | null
           order_number: string
           parent_notes: string | null
           payment_method: string | null
@@ -281,6 +359,7 @@ export type Database = {
           id?: string
           midtrans_order_id?: string | null
           notes?: string | null
+          order_date?: string | null
           order_number: string
           parent_notes?: string | null
           payment_method?: string | null
@@ -300,6 +379,7 @@ export type Database = {
           id?: string
           midtrans_order_id?: string | null
           notes?: string | null
+          order_date?: string | null
           order_number?: string
           parent_notes?: string | null
           payment_method?: string | null
@@ -410,10 +490,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      view_user_profiles: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string | null
+          phone: string | null
+          role: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          phone?: string | null
+          role?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          phone?: string | null
+          role?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: Record<PropertyKey, never> | { _user_id: string }
+        Returns: string
+      }
+      has_role: {
+        Args: { _user_id: string; _role: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
