@@ -11,6 +11,8 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary = ({ totalPrice, formatPrice, onCheckout, loading, canCheckout }: OrderSummaryProps) => {
+  console.log('OrderSummary render - canCheckout:', canCheckout, 'loading:', loading);
+  
   return (
     <div className="space-y-4">
       {/* Total */}
@@ -26,12 +28,19 @@ const OrderSummary = ({ totalPrice, formatPrice, onCheckout, loading, canCheckou
       {/* Checkout Button */}
       <Button
         onClick={onCheckout}
-        disabled={loading || !canCheckout}
-        className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+        disabled={!canCheckout || loading}
+        className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
         size="lg"
       >
         {loading ? 'Memproses...' : 'Buat Pesanan'}
       </Button>
+      
+      {/* Debug info - remove in production */}
+      {!canCheckout && !loading && (
+        <p className="text-sm text-gray-500 text-center">
+          Pilih anak terlebih dahulu untuk melanjutkan
+        </p>
+      )}
     </div>
   );
 };

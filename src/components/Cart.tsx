@@ -26,9 +26,10 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     setSelectedChildId,
     notes,
     setNotes,
-    loading,
+    loading: childrenLoading,
     fetchChildren,
-    handleCheckout
+    handleCheckout,
+    isCheckingOut
   } = cartOperations;
 
   useEffect(() => {
@@ -59,6 +60,10 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
   };
 
   const handleCheckoutClick = async () => {
+    console.log('Checkout clicked - selectedChildId:', selectedChildId);
+    console.log('Children available:', children);
+    console.log('Can checkout?', selectedChildId && children.length > 0);
+    
     await handleCheckout(cartItems, () => {
       onCheckout();
       onClose();
@@ -71,7 +76,10 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     return null;
   }
 
-  const canCheckout = selectedChildId && children.length > 0;
+  // Simplified canCheckout logic - just check if child is selected and not loading
+  const canCheckout = !!(selectedChildId && children.length > 0 && !isCheckingOut && !childrenLoading);
+
+  console.log('Cart render - canCheckout:', canCheckout, 'selectedChildId:', selectedChildId, 'children:', children.length, 'isCheckingOut:', isCheckingOut, 'childrenLoading:', childrenLoading);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -106,7 +114,7 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
             totalPrice={getTotalPrice()}
             formatPrice={formatPrice}
             onCheckout={handleCheckoutClick}
-            loading={loading}
+            loading={isCheckingOut}
             canCheckout={canCheckout}
           />
         </div>
