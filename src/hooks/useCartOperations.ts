@@ -17,6 +17,20 @@ interface Child {
   class_name: string;
 }
 
+interface OrderLineItemData {
+  order_id: string;
+  child_id: string | null;
+  child_name: string;
+  child_class: string | null;
+  menu_item_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  delivery_date: string;
+  order_date: string;
+  notes: string | null;
+}
+
 export const useCartOperations = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
@@ -124,7 +138,7 @@ export const useCartOperations = () => {
       console.log('Main order created:', orderData);
 
       // Create order line items with proper data structure and correct typing
-      const orderLineItems = cartItems.map(item => {
+      const orderLineItems: OrderLineItemData[] = cartItems.map(item => {
         const deliveryDate = item.delivery_date || item.date || new Date().toISOString().split('T')[0];
         const orderDate = new Date().toISOString().split('T')[0];
         
@@ -145,21 +159,10 @@ export const useCartOperations = () => {
 
       console.log('Order line items to insert:', orderLineItems);
 
-      // Try to use RPC function first, with fallback to direct insert
-      let lineItemsError;
-      try {
-        const { error } = await supabase.rpc('insert_order_line_items', {
-          items: orderLineItems
-        });
-        lineItemsError = error;
-      } catch (rpcError) {
-        console.log('RPC function not available, using direct insert');
-        // Fallback: Use direct insert if RPC doesn't exist
-        const { error } = await supabase
-          .from('order_line_items')
-          .insert(orderLineItems);
-        lineItemsError = error;
-      }
+      // Insert order line items directly to the table
+      const { error: lineItemsError } = await supabase
+        .from('order_line_items')
+        .insert(orderLineItems);
 
       if (lineItemsError) {
         console.error('Error creating order line items:', lineItemsError);
