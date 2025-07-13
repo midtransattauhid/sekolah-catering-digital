@@ -11,7 +11,7 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary = ({ totalPrice, formatPrice, onCheckout, loading, canCheckout }: OrderSummaryProps) => {
-  console.log('OrderSummary render - canCheckout:', canCheckout, 'loading:', loading);
+  console.log('OrderSummary render:', { canCheckout, loading });
   
   return (
     <div className="space-y-4">
@@ -35,7 +35,7 @@ const OrderSummary = ({ totalPrice, formatPrice, onCheckout, loading, canCheckou
         {loading ? 'Memproses...' : 'Buat Pesanan'}
       </Button>
       
-      {/* Debug info - remove in production */}
+      {/* Helper message */}
       {!canCheckout && !loading && (
         <p className="text-sm text-gray-500 text-center">
           Pilih anak terlebih dahulu untuk melanjutkan

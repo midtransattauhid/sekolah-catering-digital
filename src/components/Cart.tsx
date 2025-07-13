@@ -29,14 +29,16 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     loading: childrenLoading,
     fetchChildren,
     handleCheckout,
-    isCheckingOut
+    isCheckingOut,
+    canCheckout
   } = cartOperations;
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && children.length === 0) {
+      console.log('Cart opened - fetching children');
       fetchChildren();
     }
-  }, [isOpen, fetchChildren]);
+  }, [isOpen, fetchChildren, children.length]);
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity === 0) {
@@ -60,9 +62,12 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
   };
 
   const handleCheckoutClick = async () => {
-    console.log('Checkout clicked - selectedChildId:', selectedChildId);
-    console.log('Children available:', children);
-    console.log('Can checkout?', selectedChildId && children.length > 0);
+    console.log('Checkout clicked with canCheckout:', canCheckout);
+    
+    if (!canCheckout) {
+      console.log('Cannot checkout - validation failed');
+      return;
+    }
     
     await handleCheckout(cartItems, () => {
       onCheckout();
@@ -76,10 +81,13 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     return null;
   }
 
-  // Simplified canCheckout logic - just check if child is selected and not loading
-  const canCheckout = !!(selectedChildId && children.length > 0 && !isCheckingOut && !childrenLoading);
-
-  console.log('Cart render - canCheckout:', canCheckout, 'selectedChildId:', selectedChildId, 'children:', children.length, 'isCheckingOut:', isCheckingOut, 'childrenLoading:', childrenLoading);
+  console.log('Cart render - Final state:', {
+    canCheckout,
+    selectedChildId: !!selectedChildId,
+    childrenCount: children.length,
+    isCheckingOut,
+    childrenLoading
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>

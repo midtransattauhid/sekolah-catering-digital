@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
@@ -23,12 +23,18 @@ export const useCartOperations = () => {
   const [selectedChildId, setSelectedChildId] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [childrenFetched, setChildrenFetched] = useState(false);
   const { user } = useAuth();
 
-  const fetchChildren = async () => {
-    if (!user) return;
+  const fetchChildren = useCallback(async () => {
+    if (!user || childrenFetched || loading) {
+      console.log('Skipping fetchChildren - user:', !!user, 'fetched:', childrenFetched, 'loading:', loading);
+      return;
+    }
     
     setLoading(true);
+    console.log('Fetching children for user:', user.id);
+    
     try {
       const { data, error } = await supabase
         .from('children')
@@ -36,7 +42,10 @@ export const useCartOperations = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
+      
+      console.log('Children fetched:', data?.length || 0);
       setChildren(data || []);
+      setChildrenFetched(true);
     } catch (error) {
       console.error('Error fetching children:', error);
       toast({
@@ -47,9 +56,37 @@ export const useCartOperations = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, childrenFetched, loading]);
 
-  const handleCheckout = async (
+  // Reset children fetched state when user changes
+  useMemo(() => {
+    if (user) {
+      setChildrenFetched(false);
+    }
+  }, [user?.id]);
+
+  const canCheckout = useMemo(() => {
+    const result = !!(
+      selectedChildId && 
+      children.length > 0 && 
+      !isCheckingOut && 
+      !loading &&
+      childrenFetched
+    );
+    
+    console.log('canCheckout calculation:', {
+      selectedChildId: !!selectedChildId,
+      childrenLength: children.length,
+      isCheckingOut,
+      loading,
+      childrenFetched,
+      result
+    });
+    
+    return result;
+  }, [selectedChildId, children.length, isCheckingOut, loading, childrenFetched]);
+
+  const handleCheckout = useCallback(async (
     cartItems: CartItem[],
     onSuccess?: () => void
   ) => {
@@ -284,7 +321,7 @@ export const useCartOperations = () => {
     } finally {
       setIsCheckingOut(false);
     }
-  };
+  }, [user, selectedChildId, children, notes]);
 
   return {
     handleCheckout,
@@ -295,6 +332,7 @@ export const useCartOperations = () => {
     notes,
     setNotes,
     loading,
-    fetchChildren
+    fetchChildren,
+    canCheckout
   };
 };
