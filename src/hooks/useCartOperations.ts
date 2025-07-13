@@ -20,7 +20,7 @@ interface Child {
 export const useCartOperations = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
-  const [selectedChildId, setSelectedChildId] = useState('');
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -92,8 +92,8 @@ export const useCartOperations = () => {
       // Generate order number
       const orderNumber = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Get selected child info
-      const selectedChild = children.find(child => child.id === selectedChildId);
+      // Get selected child info with proper type checking
+      const selectedChild = children.find((child: Child) => child.id === selectedChildId);
       console.log('Selected child:', selectedChild);
       
       if (!selectedChild) {
