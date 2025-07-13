@@ -17,7 +17,7 @@ export const useUserManagement = () => {
     try {
       console.log('Fetching users and roles...');
       
-      // Fetch from profiles table first
+      // Fetch from profiles table
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, created_at, role');
@@ -32,8 +32,7 @@ export const useUserManagement = () => {
       // Fetch user roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
-        .select('user_id, role')
-        .order('created_at', { ascending: false });
+        .select('user_id, role');
 
       if (rolesError) {
         console.error('Error fetching roles:', rolesError);
@@ -42,82 +41,38 @@ export const useUserManagement = () => {
       
       console.log('Roles data:', rolesData);
       
-      // Try to fetch from auth.users for email (this might fail if not admin)
-      let authUsers: any[] = [];
-      try {
-        const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
-        if (!authError && users) {
-          authUsers = users;
-          console.log('Auth users:', authUsers);
-        }
-      } catch (error) {
-        console.log('Could not fetch auth users (might not have admin access):', error);
+      // Convert profiles data to ProfileUser format
+      let combinedUsers: ProfileUser[] = [];
+      
+      if (profilesData && Array.isArray(profilesData)) {
+        combinedUsers = (profilesData as ProfileData[]).map((profile: ProfileData) => ({
+          id: profile.id,
+          full_name: profile.full_name,
+          created_at: profile.created_at,
+          role: profile.role,
+          email: null // We can't access emails without admin API, so we'll show user ID instead
+        }));
       }
       
-      // Combine all user data
-      const combinedUsers: ProfileUser[] = [];
-      const processedRoles: UserRole[] = [];
-      const seenUsers = new Set<string>();
-      
-      // Process roles to get latest role per user
-      if (rolesData && Array.isArray(rolesData) && rolesData.length > 0) {
-        rolesData.forEach(role => {
-          if (role && role.user_id && !seenUsers.has(role.user_id)) {
-            seenUsers.add(role.user_id);
-            processedRoles.push(role);
-          }
-        });
-      }
-      
-      // Get all unique user IDs
-      const allUserIds = new Set<string>();
-      
-      // Add users from profiles
-      if (profilesData && Array.isArray(profilesData) && profilesData.length > 0) {
-        profilesData.forEach(profile => {
-          if (profile && profile.id) {
-            allUserIds.add(profile.id);
-          }
-        });
-      }
-      
-      // Add users from roles
-      if (processedRoles.length > 0) {
-        processedRoles.forEach(role => {
-          if (role && role.user_id) {
-            allUserIds.add(role.user_id);
-          }
-        });
-      }
-      
-      // Add users from auth
-      if (authUsers.length > 0) {
-        authUsers.forEach(user => {
-          if (user && user.id) {
-            allUserIds.add(user.id);
-          }
-        });
-      }
-      
-      // Create combined user objects
-      Array.from(allUserIds).forEach(userId => {
-        const authUser = authUsers.find(u => u && u.id === userId);
-        const profile = profilesData?.find(p => p && p.id === userId);
-        const userRole = processedRoles.find(r => r && r.user_id === userId);
+      // Add users that exist in user_roles but not in profiles
+      if (rolesData && Array.isArray(rolesData)) {
+        const existingProfileIds = combinedUsers.map(user => user.id);
+        const missingUsers = rolesData
+          .filter(role => !existingProfileIds.includes(role.user_id))
+          .map(role => ({
+            id: role.user_id,
+            full_name: null,
+            created_at: new Date().toISOString(),
+            role: role.role,
+            email: null
+          }));
         
-        combinedUsers.push({
-          id: userId,
-          full_name: profile?.full_name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || null,
-          email: authUser?.email || null,
-          created_at: profile?.created_at || authUser?.created_at || new Date().toISOString(),
-          role: userRole?.role || profile?.role || 'parent'
-        });
-      });
-      
-      console.log('Combined users:', combinedUsers);
+        combinedUsers = [...combinedUsers, ...missingUsers];
+        console.log('Combined users with missing profiles:', combinedUsers);
+      }
       
       setProfileUsers(combinedUsers);
-      setUserRoles(processedRoles);
+      setUserRoles(rolesData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -134,15 +89,10 @@ export const useUserManagement = () => {
     try {
       console.log('Updating role for user:', userId, 'to:', newRole);
       
-      // Update or insert user role (upsert will handle duplicates)
+      // Update or insert user role
       const { error: roleError } = await supabase
         .from('user_roles')
-        .upsert({ 
-          user_id: userId, 
-          role: newRole 
-        }, {
-          onConflict: 'user_id'
-        });
+        .upsert({ user_id: userId, role: newRole });
 
       if (roleError) {
         console.error('Error updating user_roles:', roleError);

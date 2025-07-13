@@ -1,9 +1,15 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
 import { CartItem } from '@/types/cart';
+
+declare global {
+  interface Window {
+    snap: any;
+  }
+}
 
 interface Child {
   id: string;
@@ -12,204 +18,30 @@ interface Child {
 }
 
 export const useCartOperations = () => {
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
-  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [selectedChildId, setSelectedChildId] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-  useEffect(() => {
-    // Load Midtrans Snap script
-    const script = document.createElement('script');
-    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
-    script.setAttribute('data-client-key', 'SB-Mid-client-your-client-key-here');
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
   const fetchChildren = async () => {
+    if (!user) return;
+    
+    setLoading(true);
     try {
-      if (!user?.id) {
-        setChildren([
-          { id: '1', name: 'Anak 1', class_name: 'Kelas 1A' },
-          { id: '2', name: 'Anak 2', class_name: 'Kelas 2B' }
-        ]);
-        return;
-      }
+      const { data, error } = await supabase
+        .from('children')
+        .select('*')
+        .eq('user_id', user.id);
 
-      // Query children table directly with fallback
-      try {
-        const { data, error } = await supabase
-          .from('children')
-          .select('id, name, class_name')
-          .eq('user_id', user.id);
-
-        if (error) {
-          console.log('Error fetching children:', error);
-          // Use fallback data
-          setChildren([
-            { id: '1', name: 'Anak 1', class_name: 'Kelas 1A' },
-            { id: '2', name: 'Anak 2', class_name: 'Kelas 2B' }
-          ]);
-          return;
-        }
-
-        // Type the data explicitly
-        const childrenData = (data || []) as Child[];
-        setChildren(childrenData);
-      } catch (queryError) {
-        console.log('Query error, using fallback:', queryError);
-        setChildren([
-          { id: '1', name: 'Anak 1', class_name: 'Kelas 1A' },
-          { id: '2', name: 'Anak 2', class_name: 'Kelas 2B' }
-        ]);
-      }
+      if (error) throw error;
+      setChildren(data || []);
     } catch (error) {
       console.error('Error fetching children:', error);
-      // Fallback data
-      setChildren([
-        { id: '1', name: 'Anak 1', class_name: 'Kelas 1A' },
-        { id: '2', name: 'Anak 2', class_name: 'Kelas 2B' }
-      ]);
-    }
-  };
-
-  const handleCheckout = async (items: CartItem[], onSuccess: () => void) => {
-    if (!selectedChildId) {
       toast({
         title: "Error",
-        description: "Pilih anak untuk pesanan ini",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (items.length === 0) {
-      toast({
-        title: "Error",
-        description: "Keranjang kosong",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const selectedChild = children.find(child => child.id === selectedChildId);
-      const totalAmount = items.reduce((total, item) => total + (item.price * item.quantity), 0);
-      const orderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-      // Create order first
-      const orderData = {
-        user_id: user?.id,
-        total_amount: totalAmount,
-        notes: notes || null,
-        status: 'pending',
-        payment_status: 'pending',
-        order_number: orderId,
-        child_name: selectedChild?.name || null,
-        child_class: selectedChild?.class_name || null,
-        midtrans_order_id: orderId
-      };
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items using the correct menu_item_id from the cart items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        menu_item_id: item.menu_item_id,
-        quantity: item.quantity,
-        price: item.price
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Prepare payment data
-      const customerDetails = {
-        first_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer',
-        email: user?.email,
-        phone: user?.user_metadata?.phone || '08123456789',
-      };
-
-      const itemDetails = items.map(item => ({
-        id: item.id,
-        price: item.price,
-        quantity: item.quantity,
-        name: item.name,
-      }));
-
-      // Create payment transaction
-      const { data: paymentData, error: paymentError } = await supabase.functions.invoke(
-        'create-payment',
-        {
-          body: {
-            orderId,
-            amount: totalAmount,
-            customerDetails,
-            itemDetails,
-          },
-        }
-      );
-
-      if (paymentError) throw paymentError;
-
-      // Open Midtrans Snap
-      if (window.snap && paymentData.snap_token) {
-        window.snap.pay(paymentData.snap_token, {
-          onSuccess: (result) => {
-            console.log('Payment success:', result);
-            toast({
-              title: "Pembayaran Berhasil!",
-              description: "Pesanan Anda telah dikonfirmasi dan sedang diproses.",
-            });
-            onSuccess();
-          },
-          onPending: (result) => {
-            console.log('Payment pending:', result);
-            toast({
-              title: "Menunggu Pembayaran",
-              description: "Pembayaran Anda sedang diproses. Mohon tunggu konfirmasi.",
-            });
-            onSuccess();
-          },
-          onError: (result) => {
-            console.error('Payment error:', result);
-            toast({
-              title: "Pembayaran Gagal",
-              description: "Terjadi kesalahan dalam proses pembayaran. Silakan coba lagi.",
-              variant: "destructive",
-            });
-          },
-          onClose: () => {
-            console.log('Payment popup closed');
-            toast({
-              title: "Pembayaran Dibatalkan",
-              description: "Anda membatalkan proses pembayaran.",
-            });
-          }
-        });
-      } else {
-        throw new Error('Midtrans Snap not loaded or token not received');
-      }
-    } catch (error: any) {
-      console.error('Error creating order:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Gagal membuat pesanan",
+        description: "Gagal memuat data anak",
         variant: "destructive",
       });
     } finally {
@@ -217,14 +49,252 @@ export const useCartOperations = () => {
     }
   };
 
+  const handleCheckout = async (
+    cartItems: CartItem[],
+    onSuccess?: () => void
+  ) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Silakan login terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedChildId) {
+      toast({
+        title: "Error",
+        description: "Silakan pilih anak terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast({
+        title: "Error",
+        description: "Keranjang belanja kosong",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCheckingOut(true);
+
+    try {
+      console.log('Starting checkout process...');
+      console.log('Cart items:', cartItems);
+      console.log('Selected child ID:', selectedChildId);
+      
+      const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      // Generate order number
+      const orderNumber = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Get selected child info
+      const selectedChild = children.find(child => child.id === selectedChildId);
+      console.log('Selected child:', selectedChild);
+      
+      if (!selectedChild) {
+        throw new Error('Data anak yang dipilih tidak ditemukan');
+      }
+
+      // Create main order first
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          order_number: orderNumber,
+          total_amount: totalAmount,
+          status: 'pending',
+          payment_status: 'pending',
+          parent_notes: notes || null,
+          child_name: selectedChild.name,
+          child_class: selectedChild.class_name
+        })
+        .select()
+        .single();
+
+      if (orderError || !orderData) {
+        console.error('Error creating order:', orderError);
+        throw new Error('Gagal membuat pesanan utama');
+      }
+
+      console.log('Main order created:', orderData);
+
+      // Create order line items with proper data structure
+      const orderLineItems = cartItems.map(item => {
+        const deliveryDate = item.delivery_date || item.date || new Date().toISOString().split('T')[0];
+        const orderDate = new Date().toISOString().split('T')[0];
+        
+        return {
+          order_id: orderData.id,
+          child_id: selectedChildId,
+          child_name: selectedChild.name,
+          child_class: selectedChild.class_name,
+          menu_item_id: item.menu_item_id,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.price * item.quantity,
+          delivery_date: deliveryDate,
+          order_date: orderDate,
+          notes: null
+        };
+      });
+
+      console.log('Order line items to insert:', orderLineItems);
+
+      const { error: lineItemsError } = await supabase
+        .from('order_line_items')
+        .insert(orderLineItems);
+
+      if (lineItemsError) {
+        console.error('Error creating order line items:', lineItemsError);
+        
+        // Try to clean up the main order if line items failed
+        await supabase
+          .from('orders')
+          .delete()
+          .eq('id', orderData.id);
+          
+        throw new Error('Gagal menyimpan detail pesanan');
+      }
+
+      console.log('Order line items created successfully');
+
+      // Generate Midtrans order ID
+      const midtransOrderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Update order with Midtrans order ID
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ midtrans_order_id: midtransOrderId })
+        .eq('id', orderData.id);
+        
+      if (updateError) {
+        console.error('Error updating order with midtrans_order_id:', updateError);
+        // Don't throw here as the order is already created
+      }
+
+      // Prepare customer details
+      const customerDetails = {
+        first_name: user.user_metadata?.full_name || 'Customer',
+        email: user.email || 'parent@example.com',
+        phone: user.user_metadata?.phone || '08123456789',
+      };
+
+      // Prepare item details for Midtrans
+      const itemDetails = cartItems.map(item => ({
+        id: item.menu_item_id,
+        price: item.price,
+        quantity: item.quantity,
+        name: `${item.name} - ${selectedChild.name}`,
+      }));
+
+      console.log('Calling create-payment with:', {
+        orderId: midtransOrderId,
+        amount: totalAmount,
+        customerDetails,
+        itemDetails
+      });
+
+      // Create payment via Supabase function
+      const { data: paymentData, error: paymentError } = await supabase.functions.invoke(
+        'create-payment',
+        {
+          body: {
+            orderId: midtransOrderId,
+            amount: totalAmount,
+            customerDetails,
+            itemDetails,
+          },
+        }
+      );
+
+      if (paymentError) {
+        console.error('Payment error:', paymentError);
+        toast({
+          title: "Error Pembayaran",
+          description: paymentError.message || "Gagal membuat pembayaran",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (paymentData?.snap_token) {
+        // Save snap_token to database
+        await supabase
+          .from('orders')
+          .update({ snap_token: paymentData.snap_token })
+          .eq('id', orderData.id);
+
+        // Open Midtrans payment popup
+        if (window.snap) {
+          window.snap.pay(paymentData.snap_token, {
+            onSuccess: () => {
+              console.log('Payment successful');
+              toast({
+                title: "Pembayaran Berhasil!",
+                description: "Pesanan Anda telah berhasil dibuat dan dibayar.",
+              });
+              onSuccess?.();
+            },
+            onPending: () => {
+              console.log('Payment pending');
+              toast({
+                title: "Pembayaran Tertunda",
+                description: "Pembayaran Anda sedang diproses.",
+              });
+              onSuccess?.();
+            },
+            onError: () => {
+              console.log('Payment error');
+              toast({
+                title: "Pembayaran Gagal",
+                description: "Terjadi kesalahan dalam pembayaran.",
+                variant: "destructive",
+              });
+            },
+            onClose: () => {
+              console.log('Payment popup closed');
+            }
+          });
+        } else {
+          console.error('Midtrans Snap not loaded');
+          toast({
+            title: "Error",
+            description: "Sistem pembayaran belum siap. Silakan refresh halaman.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        throw new Error('Token pembayaran tidak diterima');
+      }
+
+      return orderData;
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal memproses checkout",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
   return {
+    handleCheckout,
+    isCheckingOut,
     children,
     selectedChildId,
     setSelectedChildId,
     notes,
     setNotes,
     loading,
-    fetchChildren,
-    handleCheckout
+    fetchChildren
   };
 };
