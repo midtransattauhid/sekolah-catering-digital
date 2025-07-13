@@ -123,11 +123,12 @@ export const useCartOperations = () => {
 
       console.log('Main order created:', orderData);
 
-      // Create order line items with proper data structure and explicit typing
+      // Create order line items with proper data structure and correct typing
       const orderLineItems = cartItems.map(item => {
         const deliveryDate = item.delivery_date || item.date || new Date().toISOString().split('T')[0];
         const orderDate = new Date().toISOString().split('T')[0];
-        const childId: string = selectedChildId; // Explicitly type the child ID
+        // Convert selectedChildId to proper UUID or null for database
+        const childId: string | null = selectedChildId && selectedChildId.trim() !== '' ? selectedChildId : null;
         
         return {
           order_id: orderData.id,
