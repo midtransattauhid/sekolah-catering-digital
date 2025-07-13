@@ -254,7 +254,7 @@ const Index = () => {
                   </p>
                 </div>
               </div>
-            </Card>
+            </CardContent>
           </Card>
 
           <Card>
@@ -270,7 +270,7 @@ const Index = () => {
                   </p>
                 </div>
               </div>
-            </Card>
+            </CardContent>
           </Card>
         </div>
 
