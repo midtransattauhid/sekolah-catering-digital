@@ -17,6 +17,20 @@ interface Child {
   class_name: string;
 }
 
+interface OrderLineItemInsert {
+  order_id: string;
+  child_id: string | null;
+  child_name: string;
+  child_class: string | null;
+  menu_item_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  delivery_date: string;
+  order_date: string;
+  notes: string | null;
+}
+
 export const useCartOperations = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
@@ -124,7 +138,7 @@ export const useCartOperations = () => {
       console.log('Main order created:', orderData);
 
       // Create order line items with proper data structure and correct typing
-      const orderLineItems = cartItems.map(item => {
+      const orderLineItems: OrderLineItemInsert[] = cartItems.map(item => {
         const deliveryDate = item.delivery_date || item.date || new Date().toISOString().split('T')[0];
         const orderDate = new Date().toISOString().split('T')[0];
         
