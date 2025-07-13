@@ -13,3 +13,9 @@ export interface CartItem {
   delivery_date?: string;
   menu_item_name?: string;
 }
+
+export interface CartItemWithChild extends CartItem {
+  child_id: string;
+  child_name: string;
+  child_class: string;
+}

@@ -41,6 +41,7 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedChildForMenu, setSelectedChildForMenu] = useState<string>(''); // Untuk memilih anak saat menambah menu
   const [loading, setLoading] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
@@ -119,20 +120,45 @@ const Index = () => {
       return;
     }
 
+    if (!selectedChildForMenu) {
+      toast({
+        title: "Pilih Anak",
+        description: "Silakan pilih anak terlebih dahulu sebelum menambah menu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedChild = children.find(child => child.id === selectedChildForMenu);
+    if (!selectedChild) {
+      toast({
+        title: "Error",
+        description: "Data anak tidak ditemukan",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const dateString = selectedDate.toISOString().split('T')[0];
+    
+    // Cari item yang sama dengan menu, tanggal, dan anak yang sama
     const existingItem = cartItems.find(
-      item => item.menu_item_id === menuItem.id && item.date === dateString
+      item => item.menu_item_id === menuItem.id && 
+               item.date === dateString && 
+               item.child_id === selectedChild.id
     );
 
     if (existingItem) {
+      // Jika sudah ada, tambah quantity
       setCartItems(cartItems.map(item =>
         item.id === existingItem.id
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
+      // Jika belum ada, buat item baru
       const newItem: CartItem = {
-        id: `${menuItem.id}-${dateString}-${Date.now()}`,
+        id: `${menuItem.id}-${dateString}-${selectedChild.id}-${Date.now()}`,
         name: menuItem.name,
         price: menuItem.price,
         quantity: 1,
@@ -140,13 +166,16 @@ const Index = () => {
         menu_item_id: menuItem.id,
         date: dateString,
         delivery_date: dateString,
+        child_id: selectedChild.id,
+        child_name: selectedChild.name,
+        child_class: selectedChild.class_name,
       };
       setCartItems([...cartItems, newItem]);
     }
 
     toast({
       title: "Ditambahkan ke Keranjang",
-      description: `${menuItem.name} berhasil ditambahkan`,
+      description: `${menuItem.name} untuk ${selectedChild.name} berhasil ditambahkan`,
     });
   };
 
@@ -165,9 +194,13 @@ const Index = () => {
   };
 
   const getItemQuantityInCart = (menuItemId: string) => {
+    if (!selectedChildForMenu) return 0;
+    
     const dateString = selectedDate.toISOString().split('T')[0];
     const item = cartItems.find(
-      item => item.menu_item_id === menuItemId && item.date === dateString
+      item => item.menu_item_id === menuItemId && 
+               item.date === dateString && 
+               item.child_id === selectedChildForMenu
     );
     return item?.quantity || 0;
   };
@@ -213,8 +246,8 @@ const Index = () => {
           <div className="lg:col-span-1 space-y-6">
             <ChildSelector 
               children={children}
-              selectedChild={cartOperations.selectedChildId}
-              onChildSelect={cartOperations.setSelectedChildId}
+              selectedChild={selectedChildForMenu}
+              onChildSelect={setSelectedChildForMenu}
             />
             
             <DateCalendar 
@@ -253,6 +286,17 @@ const Index = () => {
 
           {/* Menu Items */}
           <div className="lg:col-span-3">
+            {!selectedChildForMenu && children.length > 0 && (
+              <Card className="mb-6 border-orange-200 bg-orange-50">
+                <CardContent className="p-4">
+                  <p className="text-orange-700 text-center">
+                    <Calendar className="h-5 w-5 inline mr-2" />
+                    Pilih anak terlebih dahulu untuk menambahkan menu ke keranjang
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {filteredMenuItems.length === 0 ? (
               <Card className="text-center py-12">
                 <CardContent>
@@ -297,7 +341,7 @@ const Index = () => {
                           </span>
                           
                           <div className="flex items-center space-x-2">
-                            {quantity > 0 ? (
+                            {quantity > 0 && selectedChildForMenu ? (
                               <>
                                 <Button
                                   size="sm"
@@ -305,7 +349,9 @@ const Index = () => {
                                   onClick={() => {
                                     const dateString = selectedDate.toISOString().split('T')[0];
                                     const cartItem = cartItems.find(
-                                      cartItem => cartItem.menu_item_id === item.id && cartItem.date === dateString
+                                      cartItem => cartItem.menu_item_id === item.id && 
+                                                  cartItem.date === dateString && 
+                                                  cartItem.child_id === selectedChildForMenu
                                     );
                                     if (cartItem) {
                                       removeFromCart(cartItem.id);
@@ -328,7 +374,8 @@ const Index = () => {
                             ) : (
                               <Button
                                 onClick={() => addToCart(item)}
-                                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                                disabled={!selectedChildForMenu}
+                                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:opacity-50"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Tambah
