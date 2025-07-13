@@ -59,6 +59,7 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
   };
 
   const handleCheckoutClick = async () => {
+    console.log('Checkout clicked:', { selectedChildId, childrenLength: children.length });
     await handleCheckout(cartItems, () => {
       onCheckout();
       onClose();
@@ -71,7 +72,10 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     return null;
   }
 
-  const canCheckout = selectedChildId && children.length > 0;
+  // Improved canCheckout logic - ensure selectedChildId is not empty and children exist
+  const canCheckout = Boolean(selectedChildId && selectedChildId.trim() !== '' && children.length > 0);
+
+  console.log('Cart state:', { selectedChildId, childrenLength: children.length, canCheckout, loading });
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
