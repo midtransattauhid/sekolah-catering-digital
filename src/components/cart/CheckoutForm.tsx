@@ -2,12 +2,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-
-interface Child {
-  id: string;
-  name: string;
-  class_name: string;
-}
+import { Child } from '@/types/checkout';
 
 interface CheckoutFormProps {
   children: Child[];
@@ -20,7 +15,6 @@ interface CheckoutFormProps {
 const CheckoutForm = ({ children, selectedChildId, onChildSelect, notes, onNotesChange }: CheckoutFormProps) => {
   return (
     <div className="space-y-4">
-      {/* Child Selection */}
       <div className="space-y-2">
         <Label htmlFor="child">Pilih Anak</Label>
         <Select value={selectedChildId} onValueChange={onChildSelect}>
@@ -42,7 +36,6 @@ const CheckoutForm = ({ children, selectedChildId, onChildSelect, notes, onNotes
         )}
       </div>
 
-      {/* Notes */}
       <div className="space-y-2">
         <Label htmlFor="notes">Catatan (Opsional)</Label>
         <Textarea

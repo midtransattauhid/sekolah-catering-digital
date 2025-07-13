@@ -1,9 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ShoppingCart, X } from 'lucide-react';
 import { CartItem } from '@/types/cart';
 import { useCartOperations } from '@/hooks/useCartOperations';
 import CartItemList from '@/components/cart/CartItemList';
@@ -41,7 +38,6 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     if (newQuantity === 0) {
       onRemoveItem(itemId);
     } else {
-      // Handle quantity update - this would need to be passed as a prop or handled differently
       console.log('Update quantity not implemented in this interface');
     }
   };
@@ -72,7 +68,6 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     return null;
   }
 
-  // Improved canCheckout logic - ensure selectedChildId is not empty and children exist
   const canCheckout = Boolean(selectedChildId && selectedChildId.trim() !== '' && children.length > 0);
 
   console.log('Cart state:', { selectedChildId, childrenLength: children.length, canCheckout, loading });
@@ -88,7 +83,6 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
         </SheetHeader>
 
         <div className="space-y-4 mt-6">
-          {/* Cart Items */}
           <CartItemList
             items={cartItems}
             onUpdateQuantity={updateQuantity}
@@ -96,7 +90,6 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
             formatPrice={formatPrice}
           />
 
-          {/* Checkout Form */}
           <CheckoutForm
             children={children}
             selectedChildId={selectedChildId}
@@ -105,7 +98,6 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
             onNotesChange={setNotes}
           />
 
-          {/* Order Summary */}
           <OrderSummary
             totalPrice={getTotalPrice()}
             formatPrice={formatPrice}
