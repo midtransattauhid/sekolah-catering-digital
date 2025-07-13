@@ -7,8 +7,9 @@ import { ShoppingCart, X } from 'lucide-react';
 import { CartItem } from '@/types/cart';
 import { useCartOperations } from '@/hooks/useCartOperations';
 import CartItemList from '@/components/cart/CartItemList';
-import CheckoutForm from '@/components/cart/CheckoutForm';
 import OrderSummary from '@/components/cart/OrderSummary';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface CartProps {
   isOpen: boolean;
@@ -22,15 +23,12 @@ interface CartProps {
 const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperations }: CartProps) => {
   const {
     children,
-    selectedChildId,
-    setSelectedChildId,
     notes,
     setNotes,
     loading: childrenLoading,
     fetchChildren,
     handleCheckout,
-    isCheckingOut,
-    canCheckout
+    isCheckingOut
   } = cartOperations;
 
   useEffect(() => {
@@ -61,33 +59,42 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
     }).format(price);
   };
 
+  // Get unique children from cart items
+  const childrenInCart = cartItems.reduce((acc, item) => {
+    if (item.child_id && !acc.find(child => child.id === item.child_id)) {
+      acc.push({
+        id: item.child_id,
+        name: item.child_name || 'Unknown',
+        class_name: item.child_class || ''
+      });
+    }
+    return acc;
+  }, [] as Array<{id: string; name: string; class_name: string}>);
+
   const handleCheckoutClick = async () => {
-    console.log('Checkout clicked with canCheckout:', canCheckout);
-    
-    if (!canCheckout) {
-      console.log('Cannot checkout - validation failed');
+    // Use the first child from cart items as selectedChildId for the checkout process
+    const firstChildId = childrenInCart[0]?.id;
+    if (!firstChildId) {
+      console.log('No child found in cart items');
       return;
     }
+
+    // Temporarily set the selectedChildId for the checkout process
+    cartOperations.setSelectedChildId(firstChildId);
     
     await handleCheckout(cartItems, () => {
       onCheckout();
       onClose();
-      setSelectedChildId('');
+      cartOperations.setSelectedChildId('');
       setNotes('');
     });
   };
 
+  const canCheckout = cartItems.length > 0 && !isCheckingOut && childrenInCart.length > 0;
+
   if (cartItems.length === 0) {
     return null;
   }
-
-  console.log('Cart render - Final state:', {
-    canCheckout,
-    selectedChildId: !!selectedChildId,
-    childrenCount: children.length,
-    isCheckingOut,
-    childrenLoading
-  });
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -95,7 +102,7 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
         <SheetHeader>
           <SheetTitle>Keranjang Belanja</SheetTitle>
           <SheetDescription>
-            Review pesanan Anda dan pilih anak untuk pengiriman
+            Review pesanan Anda sebelum checkout
           </SheetDescription>
         </SheetHeader>
 
@@ -108,14 +115,17 @@ const Cart = ({ isOpen, onClose, cartItems, onRemoveItem, onCheckout, cartOperat
             formatPrice={formatPrice}
           />
 
-          {/* Checkout Form */}
-          <CheckoutForm
-            children={children}
-            selectedChildId={selectedChildId}
-            onChildSelect={setSelectedChildId}
-            notes={notes}
-            onNotesChange={setNotes}
-          />
+          {/* Notes Section */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Catatan untuk Pesanan (Opsional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Tambahkan catatan khusus untuk pesanan Anda..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
 
           {/* Order Summary */}
           <OrderSummary

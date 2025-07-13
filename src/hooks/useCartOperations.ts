@@ -65,27 +65,6 @@ export const useCartOperations = () => {
     }
   }, [user?.id]);
 
-  const canCheckout = useMemo(() => {
-    const result = !!(
-      selectedChildId && 
-      children.length > 0 && 
-      !isCheckingOut && 
-      !loading &&
-      childrenFetched
-    );
-    
-    console.log('canCheckout calculation:', {
-      selectedChildId: !!selectedChildId,
-      childrenLength: children.length,
-      isCheckingOut,
-      loading,
-      childrenFetched,
-      result
-    });
-    
-    return result;
-  }, [selectedChildId, children.length, isCheckingOut, loading, childrenFetched]);
-
   const handleCheckout = useCallback(async (
     cartItems: CartItem[],
     onSuccess?: () => void
@@ -94,15 +73,6 @@ export const useCartOperations = () => {
       toast({
         title: "Error",
         description: "Silakan login terlebih dahulu",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedChildId) {
-      toast({
-        title: "Error",
-        description: "Silakan pilih anak terlebih dahulu",
         variant: "destructive",
       });
       return;
@@ -117,20 +87,43 @@ export const useCartOperations = () => {
       return;
     }
 
+    // Get the first child from cart items if no selectedChildId is set
+    const childIdToUse = selectedChildId || cartItems[0]?.child_id;
+    if (!childIdToUse) {
+      toast({
+        title: "Error",
+        description: "Data anak tidak ditemukan",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsCheckingOut(true);
 
     try {
       console.log('Starting checkout process...');
       console.log('Cart items:', cartItems);
-      console.log('Selected child ID:', selectedChildId);
+      console.log('Child ID to use:', childIdToUse);
       
       const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       
       // Generate order number
       const orderNumber = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Get selected child info
-      const selectedChild = children.find(child => child.id === selectedChildId);
+      // Get selected child info from cart items or children array
+      let selectedChild = children.find(child => child.id === childIdToUse);
+      if (!selectedChild && cartItems.length > 0) {
+        // Use child info from cart items if not found in children array
+        const cartItem = cartItems.find(item => item.child_id === childIdToUse);
+        if (cartItem) {
+          selectedChild = {
+            id: cartItem.child_id!,
+            name: cartItem.child_name || 'Unknown',
+            class_name: cartItem.child_class || ''
+          };
+        }
+      }
+      
       console.log('Selected child:', selectedChild);
       
       if (!selectedChild) {
@@ -167,9 +160,9 @@ export const useCartOperations = () => {
         
         return {
           order_id: orderData.id,
-          child_id: selectedChildId,
-          child_name: selectedChild.name,
-          child_class: selectedChild.class_name,
+          child_id: item.child_id || childIdToUse,
+          child_name: item.child_name || selectedChild!.name,
+          child_class: item.child_class || selectedChild!.class_name,
           menu_item_id: item.menu_item_id,
           quantity: item.quantity,
           unit_price: item.price,
@@ -225,7 +218,7 @@ export const useCartOperations = () => {
         id: item.menu_item_id,
         price: item.price,
         quantity: item.quantity,
-        name: `${item.name} - ${selectedChild.name}`,
+        name: `${item.name} - ${selectedChild!.name}`,
       }));
 
       console.log('Calling create-payment with:', {
@@ -331,7 +324,6 @@ export const useCartOperations = () => {
     notes,
     setNotes,
     loading,
-    fetchChildren,
-    canCheckout
+    fetchChildren
   };
 };
