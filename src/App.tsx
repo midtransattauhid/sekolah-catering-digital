@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import FoodManagement from "./pages/admin/FoodManagement";
 import OrderManagement from "./pages/admin/OrderManagement";
+import OrderManagementV2 from "./pages/admin/OrderManagementV2";
 import ScheduleManagement from "./pages/admin/ScheduleManagement";
 import UserManagement from "./pages/admin/UserManagement";
 import PopulateDailyMenus from "./pages/admin/PopulateDailyMenus";
@@ -104,6 +104,7 @@ function AppRoutes() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/food-management" element={<FoodManagement />} />
           <Route path="/admin/order-management" element={<OrderManagement />} />
+          <Route path="/admin/order-management-v2" element={<OrderManagementV2 />} />
           <Route path="/admin/schedule-management" element={<ScheduleManagement />} />
           <Route path="/admin/user-management" element={<UserManagement />} />
           <Route path="/admin/populate-daily-menus" element={<PopulateDailyMenus />} />
