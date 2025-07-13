@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Utensils, ShoppingBag, Calendar, FileText, LogOut, Menu, X, Plus, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Utensils, ShoppingBag, Calendar, FileText, LogOut, Menu, X, Users, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -29,8 +29,13 @@ const AdminNavbar = () => {
     },
     {
       name: "Manajemen Menu",
-      href: "/admin/food-management",
+      href: "/admin/menu-management",
       icon: Utensils,
+    },
+    {
+      name: "Kategori",
+      href: "/admin/category-management", 
+      icon: Tags,
     },
     {
       name: "Manajemen Pesanan",
@@ -43,14 +48,9 @@ const AdminNavbar = () => {
       icon: Calendar,
     },
     {
-      name: "Populate Daily Menus",
-      href: "/admin/populate-daily-menus",
-      icon: Plus,
-    },
-    {
-      name: "Rekapitulasi",
-      href: "/admin/order-recap",
-      icon: BarChart3,
+      name: "Manajemen User",
+      href: "/admin/user-management",
+      icon: Users,
     },
     {
       name: "Laporan",
