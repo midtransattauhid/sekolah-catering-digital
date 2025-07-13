@@ -145,16 +145,21 @@ export const useCartOperations = () => {
 
       console.log('Order line items to insert:', orderLineItems);
 
-      // Use raw SQL query to insert into order_line_items table
-      const { error: lineItemsError } = await supabase.rpc('insert_order_line_items', {
-        items: orderLineItems
-      }).catch(async () => {
+      // Try to use RPC function first, with fallback to direct insert
+      let lineItemsError;
+      try {
+        const { error } = await supabase.rpc('insert_order_line_items', {
+          items: orderLineItems
+        });
+        lineItemsError = error;
+      } catch (rpcError) {
+        console.log('RPC function not available, using direct insert');
         // Fallback: Use direct insert if RPC doesn't exist
         const { error } = await supabase
           .from('order_line_items')
           .insert(orderLineItems);
-        return { error };
-      });
+        lineItemsError = error;
+      }
 
       if (lineItemsError) {
         console.error('Error creating order line items:', lineItemsError);
