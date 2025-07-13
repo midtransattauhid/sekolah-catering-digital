@@ -127,12 +127,10 @@ export const useCartOperations = () => {
       const orderLineItems = cartItems.map(item => {
         const deliveryDate = item.delivery_date || item.date || new Date().toISOString().split('T')[0];
         const orderDate = new Date().toISOString().split('T')[0];
-        // Convert selectedChildId to proper UUID or null for database
-        const childId: string | null = selectedChildId && selectedChildId.trim() !== '' ? selectedChildId : null;
         
         return {
           order_id: orderData.id,
-          child_id: childId,
+          child_id: selectedChildId || null,
           child_name: selectedChild.name,
           child_class: selectedChild.class_name,
           menu_item_id: item.menu_item_id,
