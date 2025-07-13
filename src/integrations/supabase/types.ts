@@ -148,6 +148,72 @@ export type Database = {
           },
         ]
       }
+      order_line_items: {
+        Row: {
+          child_class: string | null
+          child_id: string | null
+          child_name: string
+          created_at: string
+          delivery_date: string
+          id: string
+          menu_item_id: string
+          notes: string | null
+          order_date: string
+          order_id: string
+          quantity: number
+          total_price: number | null
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          child_class?: string | null
+          child_id?: string | null
+          child_name: string
+          created_at?: string
+          delivery_date: string
+          id?: string
+          menu_item_id: string
+          notes?: string | null
+          order_date: string
+          order_id: string
+          quantity?: number
+          total_price?: number | null
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          child_class?: string | null
+          child_id?: string | null
+          child_name?: string
+          created_at?: string
+          delivery_date?: string
+          id?: string
+          menu_item_id?: string
+          notes?: string | null
+          order_date?: string
+          order_id?: string
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_line_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_line_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_schedules: {
         Row: {
           created_at: string
@@ -197,8 +263,10 @@ export type Database = {
           midtrans_order_id: string | null
           notes: string | null
           order_number: string
+          parent_notes: string | null
           payment_method: string | null
           payment_status: string | null
+          snap_token: string | null
           status: string | null
           total_amount: number
           transaction_id: string | null
@@ -214,8 +282,10 @@ export type Database = {
           midtrans_order_id?: string | null
           notes?: string | null
           order_number: string
+          parent_notes?: string | null
           payment_method?: string | null
           payment_status?: string | null
+          snap_token?: string | null
           status?: string | null
           total_amount: number
           transaction_id?: string | null
@@ -231,8 +301,10 @@ export type Database = {
           midtrans_order_id?: string | null
           notes?: string | null
           order_number?: string
+          parent_notes?: string | null
           payment_method?: string | null
           payment_status?: string | null
+          snap_token?: string | null
           status?: string | null
           total_amount?: number
           transaction_id?: string | null

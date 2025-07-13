@@ -145,9 +145,16 @@ export const useCartOperations = () => {
 
       console.log('Order line items to insert:', orderLineItems);
 
-      const { error: lineItemsError } = await supabase
-        .from('order_line_items')
-        .insert(orderLineItems);
+      // Use raw SQL query to insert into order_line_items table
+      const { error: lineItemsError } = await supabase.rpc('insert_order_line_items', {
+        items: orderLineItems
+      }).catch(async () => {
+        // Fallback: Use direct insert if RPC doesn't exist
+        const { error } = await supabase
+          .from('order_line_items')
+          .insert(orderLineItems);
+        return { error };
+      });
 
       if (lineItemsError) {
         console.error('Error creating order line items:', lineItemsError);

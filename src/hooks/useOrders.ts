@@ -51,10 +51,10 @@ export const useOrders = () => {
       // Transform the data to match our interface
       const transformedOrders = (data || []).map(order => ({
         ...order,
-        order_line_items: order.order_line_items.map((item: any) => ({
+        order_line_items: order.order_line_items?.map((item: any) => ({
           ...item,
           menu_items: item.menu_items || { name: 'Unknown Item', image_url: '' }
-        }))
+        })) || []
       }));
       
       setOrders(transformedOrders);
