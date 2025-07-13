@@ -123,14 +123,14 @@ export const useCartOperations = () => {
 
       console.log('Main order created:', orderData);
 
-      // Create order line items with proper data structure
+      // Create order line items with proper data structure and type casting
       const orderLineItems = cartItems.map(item => {
         const deliveryDate = item.delivery_date || item.date || new Date().toISOString().split('T')[0];
         const orderDate = new Date().toISOString().split('T')[0];
         
         return {
           order_id: orderData.id,
-          child_id: selectedChildId,
+          child_id: selectedChildId as string, // Explicitly cast to string
           child_name: selectedChild.name,
           child_class: selectedChild.class_name,
           menu_item_id: item.menu_item_id,
