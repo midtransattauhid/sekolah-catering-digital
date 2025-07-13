@@ -16,7 +16,7 @@ import { Navbar } from '@/components/Navbar';
 
 const Orders = () => {
   const { user } = useAuth();
-  const { orders, loading, fetchOrders } = useOrders();
+  const { orders, loading, retryPayment, fetchOrders } = useOrders();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
 
@@ -87,7 +87,11 @@ const Orders = () => {
             {/* Orders List */}
             <div className="space-y-4">
               {paginatedOrders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard 
+                  key={order.id} 
+                  order={order} 
+                  onRetryPayment={retryPayment}
+                />
               ))}
             </div>
 
