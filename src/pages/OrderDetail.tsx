@@ -29,6 +29,8 @@ const OrderDetail = () => {
     if (!orderId || !user) return;
 
     try {
+      console.log('Fetching order detail for orderId:', orderId);
+      
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -58,8 +60,11 @@ const OrderDetail = () => {
         .eq('user_id', user.id)
         .single();
 
+      console.log('Order query result:', { orderData, orderError });
+
       if (orderError) {
         if (orderError.code === 'PGRST116') {
+          console.log('Order not found, redirecting to orders page');
           toast({
             title: "Pesanan tidak ditemukan",
             description: "Pesanan yang Anda cari tidak ditemukan atau tidak dapat diakses",
@@ -71,25 +76,39 @@ const OrderDetail = () => {
         throw orderError;
       }
 
+      if (!orderData) {
+        console.log('No order data returned');
+        toast({
+          title: "Pesanan tidak ditemukan",
+          description: "Pesanan yang Anda cari tidak ditemukan",
+          variant: "destructive",
+        });
+        navigate('/orders');
+        return;
+      }
+
       // Get payment information
-      const { data: paymentData } = await supabase
+      const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
         .select('*')
         .eq('order_id', orderId)
         .order('created_at', { ascending: false })
         .limit(1);
 
+      console.log('Payment data:', { paymentData, paymentError });
+
       // Transform the data to match our interface
       const transformedOrder = {
         ...orderData,
-        order_line_items: orderData.order_line_items.map((item: any) => ({
+        order_line_items: (orderData.order_line_items || []).map((item: any) => ({
           ...item,
-          order_id: orderData.id, // Add the missing order_id
-          menu_items: item.menu_items || { name: 'Unknown Item', image_url: '' }
+          order_id: orderData.id,
+          menu_items: item.menu_items || { name: 'Unknown Item', image_url: '', description: '' }
         })),
         payments: paymentData || []
       };
 
+      console.log('Transformed order:', transformedOrder);
       setOrder(transformedOrder);
     } catch (error) {
       console.error('Error fetching order detail:', error);
@@ -145,7 +164,7 @@ const OrderDetail = () => {
     const groups: { [key: string]: { [date: string]: any[] } } = {};
 
     order.order_line_items.forEach(item => {
-      const childKey = `${item.child_name} (${item.child_class})`;
+      const childKey = `${item.child_name} (${item.child_class || 'No Class'})`;
       if (!groups[childKey]) {
         groups[childKey] = {};
       }

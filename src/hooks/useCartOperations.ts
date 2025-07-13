@@ -160,7 +160,7 @@ export const useCartOperations = () => {
 
       console.log('Main order created:', orderData);
 
-      // Create order line items with proper data structure
+      // Create order line items WITHOUT total_price (let database calculate it)
       const orderLineItems = cartItems.map(item => {
         const deliveryDate = item.delivery_date || item.date || new Date().toISOString().split('T')[0];
         const orderDate = new Date().toISOString().split('T')[0];
@@ -173,7 +173,6 @@ export const useCartOperations = () => {
           menu_item_id: item.menu_item_id,
           quantity: item.quantity,
           unit_price: item.price,
-          total_price: item.price * item.quantity,
           delivery_date: deliveryDate,
           order_date: orderDate,
           notes: null
