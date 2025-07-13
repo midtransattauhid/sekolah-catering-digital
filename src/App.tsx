@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,10 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import MidtransScript from "@/components/MidtransScript";
+
+// Components
+import AdminNavbar from "@/components/AdminNavbar";
+import CashierNavbar from "@/components/CashierNavbar";
 
 // Pages
 import Index from "./pages/Index";
@@ -92,21 +97,24 @@ function AppRoutes() {
   if (role === 'admin') {
     console.log('App: Showing admin dashboard');
     return (
-      <Routes>
-        <Route path="/" element={<AdminDashboard />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/food-management" element={<FoodManagement />} />
-        <Route path="/admin/order-management" element={<OrderManagement />} />
-        <Route path="/admin/schedule-management" element={<ScheduleManagement />} />
-        <Route path="/admin/user-management" element={<UserManagement />} />
-        <Route path="/admin/populate-daily-menus" element={<PopulateDailyMenus />} />
-        <Route path="/admin/order-recap" element={<OrderRecap />} />
-        <Route path="/admin/reports" element={<Reports />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/orders/:orderId" element={<OrderDetail />} />
-        <Route path="/auth" element={<Navigate to="/" replace />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <>
+        <AdminNavbar />
+        <Routes>
+          <Route path="/" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/food-management" element={<FoodManagement />} />
+          <Route path="/admin/order-management" element={<OrderManagement />} />
+          <Route path="/admin/schedule-management" element={<ScheduleManagement />} />
+          <Route path="/admin/user-management" element={<UserManagement />} />
+          <Route path="/admin/populate-daily-menus" element={<PopulateDailyMenus />} />
+          <Route path="/admin/order-recap" element={<OrderRecap />} />
+          <Route path="/admin/reports" element={<Reports />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:orderId" element={<OrderDetail />} />
+          <Route path="/auth" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </>
     );
   }
 
@@ -114,15 +122,18 @@ function AppRoutes() {
   if (role === 'cashier') {
     console.log('App: Showing cashier dashboard');
     return (
-      <Routes>
-        <Route path="/" element={<CashierDashboard />} />
-        <Route path="/cashier" element={<CashierDashboard />} />
-        <Route path="/cashier/reports" element={<CashierReports />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/orders/:orderId" element={<OrderDetail />} />
-        <Route path="/auth" element={<Navigate to="/" replace />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <>
+        <CashierNavbar />
+        <Routes>
+          <Route path="/" element={<CashierDashboard />} />
+          <Route path="/cashier" element={<CashierDashboard />} />
+          <Route path="/cashier/reports" element={<CashierReports />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:orderId" element={<OrderDetail />} />
+          <Route path="/auth" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </>
     );
   }
 
