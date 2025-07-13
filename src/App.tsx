@@ -1,3 +1,4 @@
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,6 +8,7 @@ import Auth from "@/pages/Auth";
 import Children from "@/pages/Children";
 import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
+import OrderFood from "@/pages/OrderFood";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import MenuManagement from "@/pages/admin/MenuManagement";
 import CategoryManagement from "@/pages/admin/CategoryManagement";
@@ -56,6 +58,7 @@ function App() {
             <Route path="/children" element={<Children />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/orders/:id" element={<OrderDetail />} />
+            <Route path="/order-food" element={<OrderFood />} />
             
             {/* Admin routes */}
             <Route path="/admin" element={<AdminDashboard />} />
